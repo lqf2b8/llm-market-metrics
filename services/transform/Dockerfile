@@ -13,6 +13,8 @@ RUN pip install -r requirements.txt \
     && mkdir -p /warehouse && chown app /warehouse
 
 COPY --chown=app . .
+# dbt writes logs/, target/ and .user.yml next to the project: the app user must own /app.
+RUN chown app /app
 USER app
 
 ENTRYPOINT ["dbt"]

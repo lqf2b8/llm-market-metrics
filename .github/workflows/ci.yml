@@ -25,6 +25,8 @@ jobs:
       - run: pytest -q
       - name: Build image
         run: docker build -t ingest:ci .
+      - name: Run the image
+        run: docker run --rm ingest:ci --help
 
   transform:
     runs-on: ubuntu-latest
@@ -51,6 +53,12 @@ jobs:
         run: dbt parse --target bigquery
       - name: Build image
         run: docker build -t transform:ci .
+      - name: Run the image as it runs in compose (non-root, fixture data)
+        run: |
+          docker run --rm \
+            -e DBT_TARGET=local -e RAW_DATA_DIR=/fixtures -e DUCKDB_PATH=/warehouse/ci.duckdb \
+            -v "$PWD/ci_fixtures/raw:/fixtures:ro" \
+            transform:ci build
 
   metrics-api:
     runs-on: ubuntu-latest
@@ -79,6 +87,13 @@ jobs:
           pytest -q
       - name: Build image
         run: docker build -t metrics-api:ci services/metrics_api
+      - name: Run the image and call it
+        run: |
+          docker run -d --name api -p 8080:8080 -e WAREHOUSE=duckdb -e DUCKDB_PATH=/w/ci.duckdb \
+            -v "${{ github.workspace }}/ci.duckdb:/w/ci.duckdb:ro" metrics-api:ci
+          for i in $(seq 1 30); do curl -sf localhost:8080/health && break; sleep 1; done
+          curl -sf localhost:8080/kpis | head -c 300
+          docker logs api
 
   memo:
     runs-on: ubuntu-latest
@@ -96,3 +111,5 @@ jobs:
       - run: pytest -q
       - name: Build image
         run: docker build -t memo:ci .
+      - name: Run the image
+        run: docker run --rm memo:ci --help
