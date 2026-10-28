@@ -1,0 +1,4 @@
+# Keep LF in the repo on every OS; Windows checkouts stop showing every file as modified.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
