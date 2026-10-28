@@ -101,6 +101,9 @@ def write_memo(facts: dict[str, Any], drafter: Drafter, out_dir: Path) -> tuple[
     if problems:
         text += "\n<!-- Number check failed:\n" + "\n".join(problems) + "\n-->\n"
     path.write_text(text, encoding="utf-8")
+    if not problems:
+        # A passing rerun supersedes any earlier rejected draft for the same week.
+        (out_dir / f"{week}.REJECTED.md").unlink(missing_ok=True)
     return path, problems
 
 

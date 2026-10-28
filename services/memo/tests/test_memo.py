@@ -192,3 +192,25 @@ def test_write_memo_quarantines_a_draft_that_fails_the_check(tmp_path, facts):
     assert path.name == "2026-10-19.REJECTED.md"
     assert not (tmp_path / "2026-10-19.md").exists()
     assert "Number check failed" in path.read_text(encoding="utf-8")
+
+
+def test_passing_rerun_removes_an_earlier_rejected_draft(tmp_path, facts):
+    write_memo(facts, FakeDrafter(complete("Spend rose about $18M.", facts)), tmp_path)
+    assert (tmp_path / "2026-10-19.REJECTED.md").exists()
+    write_memo(facts, FakeDrafter(complete("Spend rose +$17.8M.", facts)), tmp_path)
+    assert (tmp_path / "2026-10-19.md").exists()
+    assert not (tmp_path / "2026-10-19.REJECTED.md").exists()
+
+
+def test_second_real_memo_failures_were_structural_words():
+    """Regression: the second live draft was correct but said 'Three providers' (a count
+    of its own list) and '1 marketplace' (an ordinary word forced into a digit). The check
+    is right to reject both; the prompt now tells the model not to write them."""
+    facts = json.loads(
+        (FIXTURES / "first_real_memo_facts_2026-10-19.json").read_text(encoding="utf-8")
+    )
+    draft = complete("Three providers drove the move. OpenRouter is 1 marketplace.", facts)
+    assert check(draft, facts) == [
+        "number written as a word: Three",
+        "number not in facts: 1",
+    ]
