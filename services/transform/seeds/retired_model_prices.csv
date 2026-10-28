@@ -1,0 +1,13 @@
+price_key,prompt_usd_per_mtok,completion_usd_per_mtok,source_url,retrieved_on,note
+x-ai/grok-code-fast-1,0.20,1.50,https://www.benchlm.ai/xai/api-pricing,2026-10-28,"Rate listed as 'Previous' for the period it was used (2025-08 to 2026-02). xAI's docs (https://docs.x.ai/developers/models/grok-code-fast-1) now show $1.00/$2.00; the historical rate is used because usage predates the change."
+typesafe/jev-1.13-20260917,0.042,0,https://openrouter.ai/typesafe/jev-1.13-20260917,2026-10-28,Output tokens are free.
+typesafe/jev-1.14-20261014,0.042,0,https://openrouter.ai/typesafe,2026-10-28,Output tokens are free.
+google/gemini-2.0-flash-001,0.10,0.40,https://pricepertoken.com/pricing-page/model/google-gemini-2.0-flash-001,2026-10-28,Third-party aggregator; text pricing for Gemini 2.0 Flash.
+x-ai/grok-4.1-fast,0.20,0.50,https://www.benchlm.ai/xai/api-pricing,2026-10-28,Listed as 'Previous'; prompts of 200K+ tokens bill at double the rate (not modeled).
+anthropic/claude-4-sonnet-20250522,3.00,15.00,https://pricepertoken.com/pricing-page/model/anthropic-claude-sonnet-4,2026-10-28,Base tier (prompts up to 200K tokens).
+xiaomi/mimo-v2-pro-20260318,1.00,3.00,https://pricepertoken.com/pricing-page/model/xiaomi-mimo-v2-pro,2026-10-28,Base tier (prompts up to 200K tokens).
+anthropic/claude-3-7-sonnet-20250219,3.00,15.00,https://pricepertoken.com/pricing-page/model/anthropic-claude-3.7-sonnet,2026-10-28,
+google/gemini-3-pro-preview-20251117,2.00,12.00,https://pricepertoken.com/pricing-page/model/google-gemini-3-pro-preview,2026-10-28,Base tier (prompts up to 200K tokens).
+xiaomi/mimo-v2-flash-20251210,0.09,0.29,https://pricepertoken.com/pricing-page/model/xiaomi-mimo-v2-flash,2026-10-28,
+anthropic/claude-3.5-sonnet,3.00,15.00,https://pricepertoken.com/pricing-page/model/anthropic-claude-3.5-sonnet,2026-10-28,
+anthropic/claude-3.5-sonnet:beta,3.00,15.00,https://pricepertoken.com/pricing-page/model/anthropic-claude-3.5-sonnet,2026-10-28,Same model as anthropic/claude-3.5-sonnet; priced as the base listing.

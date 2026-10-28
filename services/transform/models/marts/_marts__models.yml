@@ -1,0 +1,92 @@
+version: 2
+
+models:
+  - name: dim_model
+    description: >
+      One row per model variant that has ranked in the daily top 50. first_ranked_date is
+      when it entered the top 50 (not its launch date); data starts 2025-01-01.
+    columns:
+      - name: model_permaslug
+        data_tests: [unique, not_null]
+      - name: provider
+        data_tests: [not_null]
+      - name: first_ranked_date
+        data_tests: [not_null]
+
+  - name: fct_model_usage_daily
+    description: >
+      One row per (usage_date, model_permaslug), including the "other" bucket so daily
+      totals are complete. Source: OpenRouter (openrouter.ai/rankings), CC BY 4.0.
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [usage_date, model_permaslug]
+    columns:
+      - name: week_start
+        description: Monday of the ISO week.
+        data_tests: [not_null]
+      - name: daily_rank
+        description: 1 = most tokens that day; null for the "other" bucket.
+      - name: token_share_of_day
+        data_tests:
+          - expression_is_true:
+              arguments:
+                expression: "token_share_of_day between 0 and 1"
+      - name: is_new_model
+        description: >
+          True within var('new_model_window_days') days of first entering the top 50.
+          Never true for models already ranked on the first day of data.
+
+  - name: fct_market_weekly
+    description: >
+      One row per ISO week: the headline numbers for the weekly metrics review.
+      Partial weeks (at the edges of the data) have is_complete_week = false.
+    columns:
+      - name: week_start
+        data_tests: [unique, not_null]
+      - name: priced_coverage
+        description: Share of top-50 tokens with a known price (zero prices included).
+        data_tests:
+          - expression_is_true:
+              arguments:
+                expression: "priced_coverage between 0 and 1"
+      - name: is_spend_reliable
+        description: >
+          Complete week with priced_coverage of at least var('spend_reliable_min_coverage').
+          Spend trends, forecasts and the memo use only these weeks.
+      - name: implied_spend_usd
+        description: Sum of tokens x blended list price. An index, not revenue.
+        data_tests:
+          - expression_is_true:
+              arguments:
+                expression: "implied_spend_usd >= 0"
+      - name: effective_usd_per_mtok
+        description: Implied spend per million priced tokens, free tokens included at zero.
+      - name: effective_paid_usd_per_mtok
+        description: Implied spend per million priced paid tokens (free tokens excluded).
+
+  - name: fct_provider_weekly
+    description: >
+      One row per (ISO week, provider). Provider "other" holds models outside the top 50,
+      so provider rows add up to fct_market_weekly (see assert_weekly_marts_reconcile).
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [week_start, provider]
+    columns:
+      - name: token_share
+        data_tests:
+          - expression_is_true:
+              arguments:
+                expression: "token_share between 0 and 1"
+      - name: spend_share
+        data_tests:
+          - expression_is_true:
+              arguments:
+                expression: "spend_share between 0 and 1"
+              config:
+                where: "spend_share is not null"
+      - name: spend_minus_paid_token_share
+        description: >
+          Positive when a provider's share of spend exceeds its share of paid tokens, i.e.
+          it earns more per token than the market average.

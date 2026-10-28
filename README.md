@@ -2,7 +2,7 @@
 
 An automated weekly metrics review of the LLM API market, built the way a finance analytics team would run one: public usage data in, governed metric definitions in dbt, a weekly memo explaining what moved and why, and two dashboards (Hex and Tableau) that read the same numbers.
 
-> **Status: in progress.** Day 2 of 12: ingest is built, and the dbt project has staging models, a type-2 price history and data-quality tests passing on the full history (Jan 2025 onward). Marts, metrics and everything downstream are not built yet.
+> **Status: in progress.** Day 3 of 12: ingest is built; dbt runs from raw data to weekly marts with 57 data-quality tests passing on the full history (Jan 2025 onward). The metrics layer, analysis, dashboards and memo are not built yet.
 
 ## What it answers each week
 
@@ -17,7 +17,7 @@ Seven containerized services on Google Cloud Run, sharing one BigQuery warehouse
 | Service | Runs as | Status |
 | --- | --- | --- |
 | `ingest`: OpenRouter rankings and model prices to the raw layer | Cloud Run job | Built, tested |
-| `transform`: dbt staging, price history, marts, metrics | Cloud Run job | Staging and price history built, tested |
+| `transform`: dbt staging, price history, marts, metrics | Cloud Run job | Through weekly marts; metrics layer next |
 | `analysis`: spend bridge, frozen forecasts | Cloud Run job | Planned |
 | `export`: metrics to a Google Sheet for Tableau Public | Cloud Run job | Planned |
 | `metrics-api`: read-only FastAPI over the metrics | Cloud Run service | Planned |
@@ -49,6 +49,36 @@ The same dbt project runs on DuckDB locally and in CI (`--target local`) and on 
 - **Point-in-time prices:** list prices form a type-2 history built from daily snapshots of the model list, so a price cut never rewrites past spend. It is a model rebuilt from raw data, not a dbt snapshot, so it is reproducible from scratch.
 - **Exact pricing joins only:** usage joins to prices on a key rebuilt in the rankings' own format (canonical slug plus `:variant`). No fuzzy matching: `ministral-8b` is not assumed to cost what `ministral-8b-2512` costs.
 - **Zero-priced traffic is labeled, not hidden:** `:free` variants and stealth preview models are flagged in staging and priced at zero downstream.
+- **Every price has a basis:** each day's tokens carry how they were priced: listed, retired-model list price (from a seed where every row cites its source), free, stealth preview, or unpriced.
+- **Reconciliation:** weekly provider and market tables add back to the daily facts to the token, tested on every build.
+
+## Pricing coverage
+
+OpenRouter drops retired models from its price list, so older history has more unpriced volume. Retired paid models that carry most of it are priced from a cited seed (`seeds/retired_model_prices.csv`); the rest stays unpriced and is measured instead of hidden.
+
+| Basis | Share of all tokens, Jan 2025 to Oct 2026 |
+| --- | --- |
+| Listed price | 75.5% |
+| Free variants | 8.9% |
+| Outside the top 50 ("other" row, no single price) | 6.6% |
+| Stealth previews (free) | 4.0% |
+| Retired model, sourced list price | 3.9% |
+| Unpriced | 1.1% |
+
+Priced coverage of top-50 tokens is reported every week. Spend trends use only complete weeks with at least 90% coverage (`is_spend_reliable`), which holds from July 2025 onward.
+
+## How much the spend assumption matters
+
+OpenRouter does not publish the split between prompt and completion tokens, so implied spend blends the two prices with a stated prompt share (default 75%, `var('prompt_token_share')`). For the week of 2026-10-19:
+
+| Prompt share | Implied spend | Anthropic share of spend | DeepSeek share of spend |
+| --- | --- | --- | --- |
+| 50% | $265M | 49.2% | 7.8% |
+| **75% (default)** | **$177M** | **49.2%** | **8.6%** |
+| 90% | $124M | 49.3% | 9.5% |
+| 95% | $106M | 49.3% | 10.0% |
+
+The level moves by a factor of 2.5 across plausible splits; provider shares barely move. So the weekly review leads with shares and changes and treats the dollar level as an index.
 
 ## Data and caveats
 

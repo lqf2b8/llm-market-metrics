@@ -14,3 +14,26 @@ seeds:
         data_tests: [unique, not_null]
       - name: reason
         data_tests: [not_null]
+
+  - name: retired_model_prices
+    description: >
+      List prices, USD per million tokens, for paid models that ranked in the top 50 but
+      are no longer in OpenRouter's model list. Used only when no listed price exists.
+      Every row cites where the price came from and when it was retrieved.
+    config:
+      column_types:
+        price_key: "{{ 'string' if target.type == 'bigquery' else 'varchar' }}"
+        prompt_usd_per_mtok: "{{ 'float64' if target.type == 'bigquery' else 'double' }}"
+        completion_usd_per_mtok: "{{ 'float64' if target.type == 'bigquery' else 'double' }}"
+        source_url: "{{ 'string' if target.type == 'bigquery' else 'varchar' }}"
+        retrieved_on: date
+        note: "{{ 'string' if target.type == 'bigquery' else 'varchar' }}"
+    columns:
+      - name: price_key
+        data_tests: [unique, not_null]
+      - name: prompt_usd_per_mtok
+        data_tests: [not_null]
+      - name: completion_usd_per_mtok
+        data_tests: [not_null]
+      - name: source_url
+        data_tests: [not_null]

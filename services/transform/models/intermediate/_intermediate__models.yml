@@ -36,3 +36,38 @@ models:
         description: >
           Earliest price observed for this key. Usage dated before valid_from may use it,
           flagged downstream as priced by backfill.
+
+  - name: int_usage_priced
+    description: >
+      Daily tokens per model with the list price in effect that day and the basis the price
+      came from. Implied spend = tokens x blended price, where the blend assumes
+      var('prompt_token_share') of tokens are prompt tokens.
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [usage_date, model_permaslug]
+      - expression_is_true:
+          # Every priced row has a spend; every unpriced row has none.
+          arguments:
+            expression: "(implied_spend_usd is not null) = is_priced"
+      - expression_is_true:
+          arguments:
+            expression: "implied_spend_usd = 0"
+          config:
+            where: "is_zero_priced"
+    columns:
+      - name: pricing_basis
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [other_bucket, free_variant, stealth_preview, listed, listed_backfilled,
+                         retired_list_price, unpriced]
+      - name: implied_spend_usd
+        description: Tokens x blended list price, USD. An index of spend, not anyone's revenue.
+        data_tests:
+          - expression_is_true:
+              arguments:
+                expression: "implied_spend_usd >= 0"
+              config:
+                where: "implied_spend_usd is not null"

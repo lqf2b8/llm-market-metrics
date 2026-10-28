@@ -14,6 +14,13 @@ clean-targets: [target, dbt_packages]
 vars:
   # Rows the rankings dataset returns per day: the top 50 models plus one "other" row.
   rankings_rows_per_day: 51
+  # Share of tokens assumed to be prompt (input) when blending prompt and completion prices.
+  # OpenRouter does not publish the split; this is a stated assumption, tested for sensitivity.
+  prompt_token_share: 0.75
+  # A model counts as "new" for this many days after it first enters the top 50.
+  new_model_window_days: 56
+  # Spend trends use only complete weeks where at least this share of top-50 tokens is priced.
+  spend_reliable_min_coverage: 0.90
 
 models:
   llm_market_metrics:
@@ -23,7 +30,13 @@ models:
     intermediate:
       +materialized: table
       +schema: intermediate
+    marts:
+      +materialized: table
+      +schema: marts
 
 seeds:
   llm_market_metrics:
     +schema: reference
+
+flags:
+  send_anonymous_usage_stats: false
