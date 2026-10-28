@@ -27,3 +27,6 @@ Thumbs.db
 # build output
 build/
 dist/
+
+# dbt local user id
+.user.yml
