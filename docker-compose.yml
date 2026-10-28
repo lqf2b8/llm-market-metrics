@@ -1,0 +1,14 @@
+# Local runs of each service. Services are added here as they are built.
+#
+#   docker compose run --rm ingest probe
+#   docker compose run --rm ingest rankings --backfill
+#   docker compose run --rm ingest daily
+
+services:
+  ingest:
+    build: ./services/ingest
+    env_file: .env
+    environment:
+      LOCAL_DATA_DIR: /data/raw
+    volumes:
+      - ./data:/data

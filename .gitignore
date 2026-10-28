@@ -1,0 +1,25 @@
+# secrets
+.env
+*.key.json
+
+# local data
+data/
+
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# dbt
+target/
+dbt_packages/
+logs/
+
+# editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

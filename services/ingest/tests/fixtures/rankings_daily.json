@@ -1,0 +1,13 @@
+{
+  "data": [
+    {"date": "2026-10-26", "model_permaslug": "anthropic/claude-sonnet-4.5", "total_tokens": "812345678901"},
+    {"date": "2026-10-26", "model_permaslug": "openai/gpt-4o-2024-05-13", "total_tokens": "401234567890"},
+    {"date": "2026-10-26", "model_permaslug": "deepseek/deepseek-chat-v3:free", "total_tokens": "98765432100"},
+    {"date": "2026-10-26", "model_permaslug": "other", "total_tokens": "1234567890123"},
+    {"date": "2026-10-27", "model_permaslug": "anthropic/claude-sonnet-4.5", "total_tokens": "820000000000"},
+    {"date": "2026-10-27", "model_permaslug": "openai/gpt-4o-2024-05-13", "total_tokens": "399000000000"},
+    {"date": "2026-10-27", "model_permaslug": "mystery/unlisted-model", "total_tokens": "5000000000"},
+    {"date": "2026-10-27", "model_permaslug": "other", "total_tokens": "1250000000000"}
+  ],
+  "meta": {"as_of": "2026-10-28T00:15:00Z", "start_date": "2026-10-26", "end_date": "2026-10-27", "version": "v1"}
+}

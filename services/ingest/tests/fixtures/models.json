@@ -1,0 +1,34 @@
+{
+  "data": [
+    {
+      "id": "anthropic/claude-sonnet-4.5",
+      "canonical_slug": "anthropic/claude-sonnet-4.5",
+      "name": "Anthropic: Claude Sonnet 4.5",
+      "created": 1759161676,
+      "context_length": 1000000,
+      "pricing": {"prompt": "0.000003", "completion": "0.000015"}
+    },
+    {
+      "id": "openai/gpt-4o",
+      "canonical_slug": "openai/gpt-4o-2024-05-13",
+      "name": "OpenAI: GPT-4o",
+      "created": 1715558400,
+      "context_length": 128000,
+      "pricing": {"prompt": "0.0000025", "completion": "0.00001"}
+    },
+    {
+      "id": "deepseek/deepseek-chat-v3",
+      "canonical_slug": "deepseek/deepseek-chat-v3",
+      "name": "DeepSeek: DeepSeek V3",
+      "created": 1735084800,
+      "context_length": 163840,
+      "pricing": {"prompt": "0.0000003", "completion": "0.00000088"}
+    },
+    {
+      "id": "example/no-pricing",
+      "name": "Example without pricing",
+      "created": 1700000000,
+      "context_length": 8192
+    }
+  ]
+}
