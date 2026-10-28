@@ -2,7 +2,7 @@
 
 An automated weekly metrics review of the LLM API market, built the way a finance analytics team would run one: public usage data in, governed metric definitions in dbt, a weekly memo explaining what moved and why, and two dashboards (Hex and Tableau) that read the same numbers.
 
-> **Status: in progress.** Days 1-4 and 6 of 12: ingest, dbt (raw data to governed metrics and a price-volume-mix spend bridge, 73 tests on the full history) and a read-only metrics API, all running locally in containers. Cloud deployment (day 5) is deferred until the local services are done; the forecast, memo, dashboards and portal are not built yet.
+> **Status: in progress.** Days 1-4, 6 and 7 of 12: ingest, dbt (raw data to governed metrics and a price-volume-mix spend bridge, 73 tests on the full history), a read-only metrics API and a Claude-drafted weekly memo with a number check, all running locally in containers. Cloud deployment (day 5) is deferred until the local services are done; the forecast, dashboards and portal are not built yet.
 
 ## What it answers each week
 
@@ -21,7 +21,7 @@ Seven containerized services on Google Cloud Run, sharing one BigQuery warehouse
 | `analysis`: frozen forecasts (the spend bridge lives in dbt) | Cloud Run job | Planned |
 | `export`: metrics to a Google Sheet for Tableau Public | Cloud Run job | Planned |
 | `metrics-api`: read-only FastAPI over the metrics | Cloud Run service | Built, tested; runs locally in Docker |
-| `memo`: weekly memo drafted by Claude, checked against the data | Cloud Run job | Planned |
+| `memo`: weekly memo drafted by Claude, checked against the data | Cloud Run job | Built, tested; runs locally in Docker |
 | `portal`: one page with a Hex / Tableau toggle and links | Cloud Run service | Planned |
 
 ## Run it locally
@@ -73,6 +73,10 @@ Each metric is defined once, in dbt's semantic layer (`models/semantic/_semantic
 | `new_model_share` | Share of top-50 tokens from models within 56 days of entering the top 50 |
 
 Provider token share and spend share are the same metrics for one provider divided by the market.
+
+## The weekly memo
+
+Claude drafts the memo from a facts file built from the metrics API; it is told to use only numbers that appear there, copied exactly. A checker then extracts every number and date from the draft and rejects the memo if any is missing from the facts, so a rounded, added-up or invented figure cannot reach a reader. An analyst edits each draft before it is merged into [`memos/`](memos/). See [`memos/README.md`](memos/README.md).
 
 ## Why spend moved: the bridge
 

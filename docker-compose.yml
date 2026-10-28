@@ -7,6 +7,7 @@
 #   docker compose run --rm transform test            # dbt tests only
 #   docker compose up                                 # ingest, dbt build, then serve the API
 #   open http://localhost:8080/docs                   # metrics API, interactive docs
+#   docker compose run --rm memo                      # draft this week's memo (API must be up)
 
 services:
   ingest:
@@ -41,3 +42,13 @@ services:
       - "8080:8080"
     volumes:
       - ./data:/data:ro
+
+  memo:
+    build: ./services/memo
+    profiles: ["memo"]          # on demand only: needs ANTHROPIC_API_KEY in .env
+    env_file: .env
+    environment:
+      METRICS_API_URL: http://metrics-api:8080
+      MEMO_DIR: /memos
+    volumes:
+      - ./memos:/memos
