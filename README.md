@@ -2,7 +2,7 @@
 
 An automated weekly metrics review of the LLM API market, built the way a finance analytics team would run one: public usage data in, governed metric definitions in dbt, a weekly memo explaining what moved and why, and two dashboards (Hex and Tableau) that read the same numbers.
 
-> **Status: in progress.** Day 3 of 12: ingest is built; dbt runs from raw data to weekly marts with 57 data-quality tests passing on the full history (Jan 2025 onward). The metrics layer, analysis, dashboards and memo are not built yet.
+> **Status: in progress.** Day 4 of 12: ingest is built; dbt runs from raw data to weekly marts and a governed metrics layer, with 65 data-quality tests passing on the full history (Jan 2025 onward). Both services run locally in containers. Cloud deployment, analysis, dashboards and the memo are not built yet.
 
 ## What it answers each week
 
@@ -17,7 +17,7 @@ Seven containerized services on Google Cloud Run, sharing one BigQuery warehouse
 | Service | Runs as | Status |
 | --- | --- | --- |
 | `ingest`: OpenRouter rankings and model prices to the raw layer | Cloud Run job | Built, tested |
-| `transform`: dbt staging, price history, marts, metrics | Cloud Run job | Through weekly marts; metrics layer next |
+| `transform`: dbt staging, price history, marts, metrics | Cloud Run job | Built, tested; runs locally in Docker |
 | `analysis`: spend bridge, frozen forecasts | Cloud Run job | Planned |
 | `export`: metrics to a Google Sheet for Tableau Public | Cloud Run job | Planned |
 | `metrics-api`: read-only FastAPI over the metrics | Cloud Run service | Planned |
@@ -51,6 +51,22 @@ The same dbt project runs on DuckDB locally and in CI (`--target local`) and on 
 - **Zero-priced traffic is labeled, not hidden:** `:free` variants and stealth preview models are flagged in staging and priced at zero downstream.
 - **Every price has a basis:** each day's tokens carry how they were priced: listed, retired-model list price (from a seed where every row cites its source), free, stealth preview, or unpriced.
 - **Reconciliation:** weekly provider and market tables add back to the daily facts to the token, tested on every build.
+
+## Governed metrics
+
+Each metric is defined once, in dbt's semantic layer (`models/semantic/_semantic.yml`), and validated against the warehouse with MetricFlow. Consumers read two views in the `metrics` schema whose columns carry the metric names: `weekly_kpis` (headline) and `provider_weekly` (driver view). CI queries MetricFlow and fails if either disagrees with the view, so the definitions and what people see cannot drift apart.
+
+| Metric | Definition |
+| --- | --- |
+| `tokens` | All tokens, top 50 plus the "other" bucket |
+| `paid_tokens` | Top-50 tokens excluding free variants and stealth previews |
+| `implied_spend_usd` | Tokens x blended list price; an index (see sensitivity below) |
+| `effective_paid_usd_per_mtok` | Implied spend per million priced paid tokens |
+| `priced_coverage` | Share of top-50 tokens with a known price |
+| `zero_priced_share` | Share of top-50 tokens served free |
+| `new_model_share` | Share of top-50 tokens from models within 56 days of entering the top 50 |
+
+Provider token share and spend share are the same metrics for one provider divided by the market.
 
 ## Pricing coverage
 

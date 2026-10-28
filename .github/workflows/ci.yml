@@ -40,9 +40,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -r requirements.txt
+      - run: pip install -r requirements-dev.txt
       - name: dbt build on DuckDB with fixture data
         run: dbt build --target local
+      - name: Validate the semantic layer against the warehouse
+        run: mf validate-configs
+      - name: Metrics views match MetricFlow
+        run: python scripts/check_metrics_parity.py --duckdb-path ci.duckdb
       - name: Parse for BigQuery (no credentials needed)
         run: dbt parse --target bigquery
       - name: Build image

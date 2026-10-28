@@ -1,0 +1,46 @@
+version: 2
+
+models:
+  - name: weekly_kpis
+    description: >
+      One row per ISO week: the headline KPIs for the weekly metrics review. This view is the
+      contract for every consumer (metrics API, Hex, the Tableau export, the memo). Use only
+      rows where is_complete_week for week-over-week comparisons, and only rows where
+      is_spend_reliable for spend trends.
+    config:
+      meta:
+        owner: Lucas Fields
+        source_citation: "Source: OpenRouter (openrouter.ai/rankings), CC BY 4.0"
+    columns:
+      - name: week_start
+        description: Monday of the ISO week.
+        data_tests: [unique, not_null]
+      - name: data_through_date
+        description: Last day of data in the week; earlier than Sunday for the current week.
+      - name: tokens
+        description: Metric `tokens`.
+      - name: paid_tokens
+        description: Metric `paid_tokens`.
+      - name: implied_spend_usd
+        description: Metric `implied_spend_usd`. An index; see the prompt-share sensitivity.
+      - name: priced_coverage
+        description: Metric `priced_coverage`.
+      - name: effective_paid_usd_per_mtok
+        description: Metric `effective_paid_usd_per_mtok`.
+      - name: zero_priced_share
+        description: Metric `zero_priced_share`.
+      - name: new_model_share
+        description: Metric `new_model_share`.
+
+  - name: provider_weekly
+    description: >
+      One row per (ISO week, provider): the driver view beneath the headline KPIs.
+      Provider "other" is the bucket of models outside the daily top 50.
+    config:
+      meta:
+        owner: Lucas Fields
+        source_citation: "Source: OpenRouter (openrouter.ai/rankings), CC BY 4.0"
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [week_start, provider]

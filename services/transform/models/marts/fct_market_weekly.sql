@@ -19,6 +19,7 @@ weekly as (
     select
         week_start,
         count(distinct usage_date) as days_observed,
+        max(usage_date) as data_through_date,
         sum(total_tokens) as total_tokens,
         sum(case when is_other_bucket then total_tokens else 0 end) as other_bucket_tokens,
         sum(case when is_zero_priced then total_tokens else 0 end) as zero_priced_tokens,
@@ -39,6 +40,7 @@ weekly as (
 select
     weekly.week_start,
     weekly.days_observed,
+    weekly.data_through_date,
     coalesce(gaps.known_gap_days, 0) as known_gap_days,
     weekly.days_observed + coalesce(gaps.known_gap_days, 0) = 7 as is_complete_week,
     weekly.total_tokens,

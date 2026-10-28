@@ -21,6 +21,7 @@ data_start as (
 )
 
 select
+    cast(usage.usage_date as {{ dbt.type_string() }}) || '|' || usage.model_permaslug as usage_key,
     usage.usage_date,
     {{ iso_week_start('usage.usage_date') }} as week_start,
     usage.model_permaslug,

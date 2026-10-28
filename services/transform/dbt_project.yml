@@ -33,6 +33,12 @@ models:
     marts:
       +materialized: table
       +schema: marts
+    semantic:
+      +materialized: table
+      +schema: marts
+    metrics:
+      +materialized: view
+      +schema: metrics
 
 seeds:
   llm_market_metrics:

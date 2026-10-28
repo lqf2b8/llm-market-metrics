@@ -5,6 +5,7 @@
 #   docker compose run --rm ingest daily
 #   docker compose run --rm transform build           # dbt build into ./data/warehouse.duckdb
 #   docker compose run --rm transform test            # dbt tests only
+#   docker compose up                                 # daily ingest, then dbt build, in order
 
 services:
   ingest:
@@ -17,6 +18,9 @@ services:
 
   transform:
     build: ./services/transform
+    depends_on:
+      ingest:
+        condition: service_completed_successfully
     environment:
       DBT_TARGET: local
       RAW_DATA_DIR: /data/raw

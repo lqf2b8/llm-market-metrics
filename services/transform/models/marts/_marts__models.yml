@@ -22,6 +22,9 @@ models:
           arguments:
             combination_of_columns: [usage_date, model_permaslug]
     columns:
+      - name: usage_key
+        description: Surrogate key, usage_date|model_permaslug (the semantic model's primary entity).
+        data_tests: [unique, not_null]
       - name: week_start
         description: Monday of the ISO week.
         data_tests: [not_null]

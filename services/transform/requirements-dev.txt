@@ -1,0 +1,3 @@
+# CI and local checks only; not installed in the production image.
+-r requirements.txt
+dbt-metricflow[duckdb]==0.15.0

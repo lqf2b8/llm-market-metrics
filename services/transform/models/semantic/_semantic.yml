@@ -1,0 +1,169 @@
+version: 2
+
+# Governed metric definitions. Each metric is defined once here; the metrics views,
+# the API, the dashboards and the memo all read these definitions (directly or through the
+# metrics views, which CI checks against MetricFlow's own output).
+
+models:
+  - name: metricflow_time_spine
+    description: Daily calendar for MetricFlow.
+    time_spine:
+      standard_granularity_column: date_day
+    columns:
+      - name: date_day
+        granularity: day
+
+semantic_models:
+  - name: model_usage
+    description: >
+      Daily tokens and implied spend per model variant, including the "other" bucket.
+      Source: OpenRouter (openrouter.ai/rankings), CC BY 4.0.
+    model: ref('fct_model_usage_daily')
+    defaults:
+      agg_time_dimension: usage_date
+    entities:
+      - name: usage
+        type: primary
+        expr: usage_key
+      - name: model
+        type: foreign
+        expr: model_permaslug
+    dimensions:
+      - name: usage_date
+        type: time
+        type_params:
+          time_granularity: day
+      - name: provider
+        type: categorical
+      - name: pricing_basis
+        type: categorical
+      - name: is_other_bucket
+        type: categorical
+      - name: is_zero_priced
+        type: categorical
+      - name: is_new_model
+        type: categorical
+    measures:
+      - name: total_tokens
+        description: All tokens, including the "other" bucket.
+        agg: sum
+      - name: top50_tokens
+        description: Tokens of models individually ranked in the daily top 50.
+        agg: sum
+        expr: "case when is_other_bucket then 0 else total_tokens end"
+      - name: paid_tokens
+        description: Top-50 tokens not served free (free variants and stealth previews excluded).
+        agg: sum
+        expr: "case when is_other_bucket or is_zero_priced then 0 else total_tokens end"
+      - name: zero_priced_tokens
+        agg: sum
+        expr: "case when is_zero_priced then total_tokens else 0 end"
+      - name: priced_tokens
+        description: Top-50 tokens with a known price, zero prices included.
+        agg: sum
+        expr: "case when is_priced then total_tokens else 0 end"
+      - name: priced_paid_tokens
+        agg: sum
+        expr: "case when is_priced and not is_zero_priced then total_tokens else 0 end"
+      - name: new_model_tokens
+        agg: sum
+        expr: "case when is_new_model then total_tokens else 0 end"
+      - name: implied_spend
+        description: Tokens x blended list price, USD. An index, not revenue.
+        agg: sum
+        expr: "coalesce(implied_spend_usd, 0)"
+
+metrics:
+  - name: tokens
+    label: Tokens
+    description: All tokens routed through OpenRouter, top 50 plus the "other" bucket.
+    type: simple
+    type_params:
+      measure: total_tokens
+
+  - name: paid_tokens
+    label: Paid tokens
+    description: Top-50 tokens excluding free variants and stealth previews.
+    type: simple
+    type_params:
+      measure: paid_tokens
+
+  - name: implied_spend_usd
+    label: Implied spend (USD)
+    description: >
+      Tokens x blended list price. The level depends on the assumed prompt/completion split;
+      shares and changes do not (see README).
+    type: simple
+    type_params:
+      measure: implied_spend
+
+  - name: priced_coverage
+    label: Priced coverage
+    description: Share of top-50 tokens with a known price, zero prices included.
+    type: ratio
+    type_params:
+      numerator: priced_tokens
+      denominator: top50_tokens
+
+  - name: effective_paid_usd_per_mtok
+    label: Effective price, paid tokens (USD per million)
+    description: Implied spend per million priced paid tokens. Falls with price cuts and mix shift to cheaper models.
+    type: derived
+    type_params:
+      expr: implied_spend_usd * 1000000 / priced_paid_tokens
+      metrics:
+        - name: implied_spend_usd
+        - name: priced_paid_tokens
+
+  - name: top50_tokens
+    label: Top-50 tokens
+    description: Tokens of models individually ranked in the daily top 50; denominator of the shares.
+    type: simple
+    type_params:
+      measure: top50_tokens
+
+  - name: priced_tokens
+    label: Priced tokens
+    description: Top-50 tokens with a known price, zero prices included.
+    type: simple
+    type_params:
+      measure: priced_tokens
+
+  - name: zero_priced_tokens
+    label: Free tokens
+    description: Top-50 tokens served free (free variants and stealth previews).
+    type: simple
+    type_params:
+      measure: zero_priced_tokens
+
+  - name: new_model_tokens
+    label: New-model tokens
+    description: Top-50 tokens from models within 56 days of first entering the top 50.
+    type: simple
+    type_params:
+      measure: new_model_tokens
+
+  - name: priced_paid_tokens
+    label: Priced paid tokens
+    description: Paid top-50 tokens with a known price; the denominator of the effective paid price.
+    type: simple
+    type_params:
+      measure: priced_paid_tokens
+
+  - name: zero_priced_share
+    label: Free share
+    description: Share of top-50 tokens served free (free variants and stealth previews).
+    type: ratio
+    type_params:
+      numerator: zero_priced_tokens
+      denominator: top50_tokens
+
+  - name: new_model_share
+    label: New-model share
+    description: >
+      Share of top-50 tokens from models within 56 days of first entering the top 50.
+      A leading indicator of switching between models.
+    type: ratio
+    type_params:
+      numerator: new_model_tokens
+      denominator: top50_tokens
