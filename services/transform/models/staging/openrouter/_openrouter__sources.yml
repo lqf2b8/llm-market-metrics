@@ -1,0 +1,33 @@
+version: 2
+
+sources:
+  - name: openrouter
+    description: >
+      Raw tables written by the ingest service. On BigQuery they live in the raw dataset;
+      locally, dbt-duckdb reads the same rows from JSON Lines via external_location
+      (ignored by the BigQuery adapter).
+    schema: "{{ env_var('BQ_RAW_DATASET', 'raw') }}"
+    config:
+      loaded_at_field: ingested_at
+      freshness:
+        warn_after: {count: 30, period: hour}
+        error_after: {count: 54, period: hour}
+    tables:
+      - name: openrouter_rankings_daily
+        description: >
+          Daily total tokens for the top 50 models plus one "other" row. Source: OpenRouter
+          (openrouter.ai/rankings), CC BY 4.0. One row per (date, model_permaslug).
+        config:
+          meta:
+            external_location: >-
+              read_json('{{ env_var("RAW_DATA_DIR", "../../data/raw") }}/openrouter_rankings_daily/*.jsonl',
+              format = 'newline_delimited')
+      - name: openrouter_models_snapshot
+        description: >
+          One snapshot of OpenRouter's model list per day. Prices are USD per token, as strings.
+          One row per (snapshot_date, model_id).
+        config:
+          meta:
+            external_location: >-
+              read_json('{{ env_var("RAW_DATA_DIR", "../../data/raw") }}/openrouter_models_snapshot/*.jsonl',
+              format = 'newline_delimited')

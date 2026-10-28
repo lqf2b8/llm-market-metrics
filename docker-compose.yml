@@ -1,8 +1,10 @@
-# Local runs of each service. Services are added here as they are built.
+# Local runs of each service, against files in ./data instead of the cloud.
 #
-#   docker compose run --rm ingest probe
+#   docker compose run --rm ingest probe              # day-1 checks against the live API
 #   docker compose run --rm ingest rankings --backfill
 #   docker compose run --rm ingest daily
+#   docker compose run --rm transform build           # dbt build into ./data/warehouse.duckdb
+#   docker compose run --rm transform test            # dbt tests only
 
 services:
   ingest:
@@ -10,5 +12,14 @@ services:
     env_file: .env
     environment:
       LOCAL_DATA_DIR: /data/raw
+    volumes:
+      - ./data:/data
+
+  transform:
+    build: ./services/transform
+    environment:
+      DBT_TARGET: local
+      RAW_DATA_DIR: /data/raw
+      DUCKDB_PATH: /data/warehouse.duckdb
     volumes:
       - ./data:/data

@@ -1,0 +1,29 @@
+name: llm_market_metrics
+version: "0.1.0"
+config-version: 2
+profile: llm_market_metrics
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+target-path: target
+clean-targets: [target, dbt_packages]
+
+vars:
+  # Rows the rankings dataset returns per day: the top 50 models plus one "other" row.
+  rankings_rows_per_day: 51
+
+models:
+  llm_market_metrics:
+    staging:
+      +materialized: view
+      +schema: staging
+    intermediate:
+      +materialized: table
+      +schema: intermediate
+
+seeds:
+  llm_market_metrics:
+    +schema: reference

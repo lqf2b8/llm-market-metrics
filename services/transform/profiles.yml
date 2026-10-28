@@ -1,0 +1,19 @@
+# Two targets, one project:
+#   local    - DuckDB file, reads the ingest service's JSON Lines (no cloud account needed)
+#   bigquery - the production warehouse; auth via Application Default Credentials locally,
+#              the job's service account on Cloud Run
+llm_market_metrics:
+  target: "{{ env_var('DBT_TARGET', 'local') }}"
+  outputs:
+    local:
+      type: duckdb
+      path: "{{ env_var('DUCKDB_PATH', '../../data/warehouse.duckdb') }}"
+      threads: 4
+    bigquery:
+      type: bigquery
+      method: oauth
+      project: "{{ env_var('GCP_PROJECT', 'unset') }}"
+      dataset: "{{ env_var('BQ_DBT_DATASET', 'analytics') }}"
+      location: "{{ env_var('BQ_LOCATION', 'US') }}"
+      threads: 4
+      job_execution_timeout_seconds: 600

@@ -1,0 +1,80 @@
+version: 2
+
+models:
+  - name: stg_openrouter__rankings_daily
+    description: >
+      Daily token totals, one row per (usage_date, model_permaslug): the top 50 models and
+      one "other" bucket. Completeness (51 rows a day, no unexplained missing days) is
+      checked by assert_rankings_complete_daily.
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [usage_date, model_permaslug]
+    columns:
+      - name: usage_date
+        description: UTC calendar date of the usage.
+        data_tests: [not_null]
+      - name: model_permaslug
+        description: Model variant id as the rankings report it, e.g. provider/model-20261019:free.
+        data_tests: [not_null]
+      - name: provider
+        description: Text before the first '/'; null for the "other" bucket.
+        data_tests:
+          - not_null:
+              config:
+                where: "not is_other_bucket"
+      - name: base_slug
+        description: Permaslug without the ':variant' suffix.
+      - name: variant
+        description: Suffix after ':' (free, thinking, ...), null when there is none.
+      - name: total_tokens
+        description: >
+          Prompt + completion tokens that day. Counted with each provider's own tokenizer,
+          so not strictly comparable across providers.
+        data_tests:
+          - not_null
+          - expression_is_true:
+              arguments:
+                expression: "total_tokens >= 0"
+      - name: is_other_bucket
+        description: True for the aggregate row covering every model outside the day's top 50.
+      - name: is_free_variant
+        description: True for ':free' variants, which are priced at zero.
+      - name: is_stealth_preview
+        description: >
+          True for unannounced models served free during a preview: provider 'stealth', or
+          provider 'openrouter' with a name ending in -alpha or -beta. Priced at zero.
+
+  - name: stg_openrouter__models
+    description: >
+      Daily snapshots of OpenRouter's model list, one row per (snapshot_date, model_id).
+      Prices are converted to USD per million tokens.
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [snapshot_date, model_id]
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [snapshot_date, price_key]
+    columns:
+      - name: price_key
+        description: >
+          Canonical slug plus the model id's ':variant' suffix. Matches the rankings
+          permaslug format exactly, so it is the join key for pricing.
+        data_tests: [not_null]
+      - name: prompt_usd_per_mtok
+        description: List price for prompt tokens, USD per million. Null when the price varies (routers).
+        data_tests:
+          - expression_is_true:
+              arguments:
+                expression: "prompt_usd_per_mtok >= 0"
+              config:
+                where: "prompt_usd_per_mtok is not null"
+      - name: completion_usd_per_mtok
+        description: List price for completion tokens, USD per million. Null when the price varies.
+        data_tests:
+          - expression_is_true:
+              arguments:
+                expression: "completion_usd_per_mtok >= 0"
+              config:
+                where: "completion_usd_per_mtok is not null"

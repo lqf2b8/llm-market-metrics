@@ -1,0 +1,5 @@
+target/
+logs/
+dbt_packages/
+ci_fixtures/
+*.duckdb

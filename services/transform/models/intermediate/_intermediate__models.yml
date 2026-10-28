@@ -1,0 +1,38 @@
+version: 2
+
+models:
+  - name: int_model_prices_history
+    description: >
+      Type-2 list-price history, one row per price_key per unchanged-price period, derived
+      from the daily model-list snapshots. Join usage on
+      usage_date >= valid_from and (valid_to is null or usage_date < valid_to).
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [price_key, valid_from]
+      - unique_combination_of_columns:
+          # At most one current price per key.
+          arguments:
+            combination_of_columns: [price_key]
+          config:
+            where: "is_current"
+      - expression_is_true:
+          arguments:
+            expression: "valid_to > valid_from"
+          config:
+            where: "valid_to is not null"
+      - expression_is_true:
+          arguments:
+            expression: "last_observed_date >= valid_from"
+    columns:
+      - name: price_key
+        data_tests: [not_null]
+      - name: valid_from
+        description: First snapshot date with this price (inclusive).
+        data_tests: [not_null]
+      - name: valid_to
+        description: Date the next price took effect (exclusive); null for the current price.
+      - name: is_first_window
+        description: >
+          Earliest price observed for this key. Usage dated before valid_from may use it,
+          flagged downstream as priced by backfill.

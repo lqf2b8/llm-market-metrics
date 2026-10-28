@@ -1,0 +1,16 @@
+version: 2
+
+seeds:
+  - name: known_source_gaps
+    description: >
+      Dates the source has no data for, confirmed by re-pulling. The completeness test
+      expects these days to be missing; any other missing day fails the build.
+    config:
+      column_types:
+        usage_date: date
+        reason: "{{ 'string' if target.type == 'bigquery' else 'varchar' }}"
+    columns:
+      - name: usage_date
+        data_tests: [unique, not_null]
+      - name: reason
+        data_tests: [not_null]

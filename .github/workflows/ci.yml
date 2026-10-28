@@ -25,3 +25,25 @@ jobs:
       - run: pytest -q
       - name: Build image
         run: docker build -t ingest:ci .
+
+  transform:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/transform
+    env:
+      DBT_PROFILES_DIR: .
+      RAW_DATA_DIR: ci_fixtures/raw
+      DUCKDB_PATH: ci.duckdb
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: dbt build on DuckDB with fixture data
+        run: dbt build --target local
+      - name: Parse for BigQuery (no credentials needed)
+        run: dbt parse --target bigquery
+      - name: Build image
+        run: docker build -t transform:ci .
