@@ -20,6 +20,8 @@ from importlib import resources
 from pathlib import Path
 from typing import Any, Protocol
 
+import requests
+
 from .check_numbers import check
 from .facts import MetricsApi, build_facts
 
@@ -112,7 +114,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--model", default=os.environ.get("MEMO_MODEL", DEFAULT_MODEL))
     args = parser.parse_args(argv)
 
-    facts = build_facts(MetricsApi(args.api_url), args.week)
+    try:
+        facts = build_facts(MetricsApi(args.api_url), args.week)
+    except requests.ConnectionError:
+        print(
+            f"Cannot reach the metrics API at {args.api_url}. Start it with "
+            "`docker compose up`, or run this with `docker compose run --rm memo`, "
+            "which starts it.",
+            file=sys.stderr,
+        )
+        return 2
     path, problems = write_memo(facts, ClaudeDrafter(args.model), Path(args.out_dir))
     if problems:
         print(f"Number check failed ({len(problems)}); draft saved to {path}", file=sys.stderr)

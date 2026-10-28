@@ -9,7 +9,7 @@
 #   docker compose run --rm transform test            # dbt tests only
 #   docker compose up                                 # ingest, dbt build, then serve the API
 #   open http://localhost:8080/docs                   # metrics API, interactive docs
-#   docker compose run --rm memo                      # draft this week's memo (API must be up)
+#   docker compose run --rm memo                      # draft this week's memo (starts the API if needed)
 
 services:
   ingest:
@@ -45,10 +45,18 @@ services:
       - "8080:8080"
     volumes:
       - warehouse:/warehouse:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
 
   memo:
     build: ./services/memo
     profiles: ["memo"]          # on demand only: needs ANTHROPIC_API_KEY in .env
+    depends_on:                 # starts the API (and the pipeline before it) if not running
+      metrics-api:
+        condition: service_healthy
     env_file: .env
     environment:
       METRICS_API_URL: http://metrics-api:8080
