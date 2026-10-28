@@ -5,7 +5,8 @@
 #   docker compose run --rm ingest daily
 #   docker compose run --rm transform build           # dbt build into ./data/warehouse.duckdb
 #   docker compose run --rm transform test            # dbt tests only
-#   docker compose up                                 # daily ingest, then dbt build, in order
+#   docker compose up                                 # ingest, dbt build, then serve the API
+#   open http://localhost:8080/docs                   # metrics API, interactive docs
 
 services:
   ingest:
@@ -27,3 +28,16 @@ services:
       DUCKDB_PATH: /data/warehouse.duckdb
     volumes:
       - ./data:/data
+
+  metrics-api:
+    build: ./services/metrics_api
+    depends_on:
+      transform:
+        condition: service_completed_successfully
+    environment:
+      WAREHOUSE: duckdb
+      DUCKDB_PATH: /data/warehouse.duckdb
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data:ro

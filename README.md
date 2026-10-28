@@ -2,7 +2,7 @@
 
 An automated weekly metrics review of the LLM API market, built the way a finance analytics team would run one: public usage data in, governed metric definitions in dbt, a weekly memo explaining what moved and why, and two dashboards (Hex and Tableau) that read the same numbers.
 
-> **Status: in progress.** Day 4 of 12: ingest is built; dbt runs from raw data to weekly marts and a governed metrics layer, with 65 data-quality tests passing on the full history (Jan 2025 onward). Both services run locally in containers. Cloud deployment, analysis, dashboards and the memo are not built yet.
+> **Status: in progress.** Days 1-4 and 6 of 12: ingest, dbt (raw data to governed metrics and a price-volume-mix spend bridge, 73 tests on the full history) and a read-only metrics API, all running locally in containers. Cloud deployment (day 5) is deferred until the local services are done; the forecast, memo, dashboards and portal are not built yet.
 
 ## What it answers each week
 
@@ -18,9 +18,9 @@ Seven containerized services on Google Cloud Run, sharing one BigQuery warehouse
 | --- | --- | --- |
 | `ingest`: OpenRouter rankings and model prices to the raw layer | Cloud Run job | Built, tested |
 | `transform`: dbt staging, price history, marts, metrics | Cloud Run job | Built, tested; runs locally in Docker |
-| `analysis`: spend bridge, frozen forecasts | Cloud Run job | Planned |
+| `analysis`: frozen forecasts (the spend bridge lives in dbt) | Cloud Run job | Planned |
 | `export`: metrics to a Google Sheet for Tableau Public | Cloud Run job | Planned |
-| `metrics-api`: read-only FastAPI over the metrics | Cloud Run service | Planned |
+| `metrics-api`: read-only FastAPI over the metrics | Cloud Run service | Built, tested; runs locally in Docker |
 | `memo`: weekly memo drafted by Claude, checked against the data | Cloud Run job | Planned |
 | `portal`: one page with a Hex / Tableau toggle and links | Cloud Run service | Planned |
 
@@ -42,6 +42,12 @@ docker compose run --rm transform build           # dbt build into data/warehous
 ```
 
 The same dbt project runs on DuckDB locally and in CI (`--target local`) and on BigQuery in production (`--target bigquery`).
+
+```bash
+docker compose up                                 # ingest, dbt build, then the API on :8080
+```
+
+The API's interactive docs are at http://localhost:8080/docs. Endpoints: `/as-of`, `/kpis`, `/kpis/history`, `/providers`, `/bridge`; each takes `week=` (a Monday) and defaults to the latest complete week. It reads only the `metrics` views, so it cannot disagree with the dashboards or the memo.
 
 ## Data quality, by design
 
@@ -67,6 +73,16 @@ Each metric is defined once, in dbt's semantic layer (`models/semantic/_semantic
 | `new_model_share` | Share of top-50 tokens from models within 56 days of entering the top 50 |
 
 Provider token share and spend share are the same metrics for one provider divided by the market.
+
+## Why spend moved: the bridge
+
+Each week's change in implied spend splits into three parts, per model, that add up exactly (tested on every build):
+
+- **Volume:** the market grew or shrank, at last week's prices and mix.
+- **Mix:** a model gained or lost share, at its last-week price.
+- **Price:** a model's own price changed.
+
+For the week of 2026-10-19, implied spend rose $17.8M: +$24.9M from volume and -$7.1M from mix as traffic shifted toward cheaper models. Anthropic added $16.6M; StepFun lost $13.7M of share. Price effects are measured only from 2026-10-28, when daily price snapshots began; before that, prices are backfilled and constant.
 
 ## Pricing coverage
 

@@ -93,3 +93,12 @@ models:
         description: >
           Positive when a provider's share of spend exceeds its share of paid tokens, i.e.
           it earns more per token than the market average.
+
+  - name: fct_spend_bridge_model_weekly
+    description: >
+      Price-volume-mix bridge per (week, model) of the change in implied spend versus the
+      prior week. Effects add up to each model's spend change (assert_spend_bridge_adds_up).
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [week_start, model_permaslug]

@@ -44,3 +44,25 @@ models:
       - unique_combination_of_columns:
           arguments:
             combination_of_columns: [week_start, provider]
+
+  - name: spend_bridge_weekly
+    description: >
+      Price-volume-mix bridge of the week-over-week change in implied spend. volume +
+      mix + price = spend change exactly. Price effects are near zero before 2026-10-28,
+      when daily price snapshots began; earlier prices are backfilled and so constant.
+    config:
+      meta:
+        owner: Lucas Fields
+    columns:
+      - name: week_start
+        data_tests: [unique, not_null]
+
+  - name: spend_bridge_provider_weekly
+    description: The spend bridge summed by provider.
+    config:
+      meta:
+        owner: Lucas Fields
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [week_start, provider]
