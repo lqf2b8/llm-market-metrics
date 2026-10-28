@@ -38,7 +38,7 @@ docker compose run --rm ingest prices
 With `SINK=local`, raw data lands as JSON Lines under `data/raw/`, one file per date. Reruns replace a date's file rather than duplicating it; the BigQuery sink does the same with a transactional partition swap.
 
 ```bash
-docker compose run --rm transform build           # dbt build into data/warehouse.duckdb
+docker compose run --rm transform build           # dbt build into the warehouse volume
 ```
 
 The same dbt project runs on DuckDB locally and in CI (`--target local`) and on BigQuery in production (`--target bigquery`).

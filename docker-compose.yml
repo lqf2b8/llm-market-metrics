@@ -1,9 +1,11 @@
 # Local runs of each service, against files in ./data instead of the cloud.
+# Raw data lives in ./data (a folder you can open); the DuckDB warehouse lives in a Docker
+# volume, because DuckDB needs file locking that Windows/macOS folder sharing lacks.
 #
 #   docker compose run --rm ingest probe              # day-1 checks against the live API
 #   docker compose run --rm ingest rankings --backfill
 #   docker compose run --rm ingest daily
-#   docker compose run --rm transform build           # dbt build into ./data/warehouse.duckdb
+#   docker compose run --rm transform build           # dbt build into the warehouse volume
 #   docker compose run --rm transform test            # dbt tests only
 #   docker compose up                                 # ingest, dbt build, then serve the API
 #   open http://localhost:8080/docs                   # metrics API, interactive docs
@@ -26,9 +28,10 @@ services:
     environment:
       DBT_TARGET: local
       RAW_DATA_DIR: /data/raw
-      DUCKDB_PATH: /data/warehouse.duckdb
+      DUCKDB_PATH: /warehouse/warehouse.duckdb
     volumes:
-      - ./data:/data
+      - ./data:/data:ro
+      - warehouse:/warehouse
 
   metrics-api:
     build: ./services/metrics_api
@@ -37,11 +40,11 @@ services:
         condition: service_completed_successfully
     environment:
       WAREHOUSE: duckdb
-      DUCKDB_PATH: /data/warehouse.duckdb
+      DUCKDB_PATH: /warehouse/warehouse.duckdb
     ports:
       - "8080:8080"
     volumes:
-      - ./data:/data:ro
+      - warehouse:/warehouse:ro
 
   memo:
     build: ./services/memo
@@ -52,3 +55,6 @@ services:
       MEMO_DIR: /memos
     volumes:
       - ./memos:/memos
+
+volumes:
+  warehouse:
