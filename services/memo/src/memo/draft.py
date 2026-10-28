@@ -24,7 +24,13 @@ from .check_numbers import check
 from .facts import MetricsApi, build_facts
 
 DEFAULT_MODEL = "claude-sonnet-5-5"
-MAX_TOKENS = 2000
+# Generous: the memo is ~1,000 tokens, but the output budget is shared with any reasoning
+# the model does first. A 2,000 budget truncated the first real memo mid-sentence.
+MAX_TOKENS = 8000
+
+
+class IncompleteDraftError(RuntimeError):
+    """The model stopped before finishing (for example, it ran out of output tokens)."""
 
 
 class Drafter(Protocol):
@@ -48,6 +54,10 @@ class ClaudeDrafter:
             max_tokens=MAX_TOKENS,
             messages=[{"role": "user", "content": prompt}],
         )
+        if message.stop_reason != "end_turn":
+            raise IncompleteDraftError(
+                f"Draft stopped early (stop_reason={message.stop_reason!r}); nothing was saved"
+            )
         return "".join(block.text for block in message.content if block.type == "text").strip()
 
 

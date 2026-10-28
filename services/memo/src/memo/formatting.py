@@ -5,7 +5,9 @@ from __future__ import annotations
 
 
 def money(value: float) -> str:
-    """$176.9M, $1.2B, $950K, $12."""
+    """$176.9M, $1.2B, $950K, $12. Amounts under 50 cents are $0, with no sign."""
+    if abs(value) < 0.5:
+        return "$0"
     sign = "-" if value < 0 else ""
     v = abs(value)
     for threshold, suffix in ((1e9, "B"), (1e6, "M"), (1e3, "K")):
@@ -15,7 +17,8 @@ def money(value: float) -> str:
 
 
 def signed_money(value: float) -> str:
-    return ("+" if value >= 0 else "") + money(value)
+    text = money(value)
+    return text if text == "$0" or text.startswith("-") else "+" + text
 
 
 def tokens(value: float) -> str:
