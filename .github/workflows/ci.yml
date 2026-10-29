@@ -43,8 +43,8 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r requirements-dev.txt
-      - name: dbt build on DuckDB with fixture data
-        run: dbt build --target local
+      - name: dbt build on DuckDB with fixture data (first pass; forecasts are tested in metrics-api)
+        run: dbt build --target local --exclude tag:post_analysis
       - name: Validate the semantic layer against the warehouse
         run: mf validate-configs
       - name: Metrics views match MetricFlow
@@ -58,28 +58,58 @@ jobs:
           docker run --rm \
             -e DBT_TARGET=local -e RAW_DATA_DIR=/fixtures -e DUCKDB_PATH=/warehouse/ci.duckdb \
             -v "$PWD/ci_fixtures/raw:/fixtures:ro" \
-            transform:ci build
+            transform:ci
 
-  metrics-api:
+  analysis:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/analysis
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Build a warehouse from fixtures for the contract tests
+      - run: pip install -e ".[dev]"
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: pytest -q
+      - name: Build image
+        run: docker build -t analysis:ci .
+
+  metrics-api:
+    # The whole local pipeline on 26 weeks of synthetic data: dbt first pass, the analysis
+    # service (as its container), dbt second pass, then the API's contract tests.
+    runs-on: ubuntu-latest
+    env:
+      DBT_PROFILES_DIR: .
+      RAW_DATA_DIR: ${{ github.workspace }}/fixtures26
+      DUCKDB_PATH: ${{ github.workspace }}/warehouse/ci.duckdb
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Generate 26 weeks of fixture data and run dbt's first pass
         working-directory: services/transform
-        env:
-          DBT_PROFILES_DIR: .
-          RAW_DATA_DIR: ci_fixtures/raw
-          DUCKDB_PATH: ${{ github.workspace }}/ci.duckdb
         run: |
           pip install -r requirements.txt
-          dbt build --target local
+          python ci_fixtures/generate.py --days 182 --out "$RAW_DATA_DIR"
+          mkdir -p "$(dirname "$DUCKDB_PATH")"
+          dbt build --target local --exclude tag:post_analysis
+      - name: Run the analysis image as it runs in compose (non-root)
+        run: |
+          docker build -t analysis:ci services/analysis
+          chmod 777 "$(dirname "$DUCKDB_PATH")" && chmod 666 "$DUCKDB_PATH"
+          docker run --rm -e WAREHOUSE=duckdb -e DUCKDB_PATH=/warehouse/ci.duckdb \
+            -v "$(dirname "$DUCKDB_PATH"):/warehouse" analysis:ci
+      - name: dbt second pass (forecast models and their tests)
+        working-directory: services/transform
+        run: dbt build --target local --select tag:post_analysis
       - name: Lint and test
         working-directory: services/metrics_api
         env:
-          METRICS_DUCKDB_PATH: ${{ github.workspace }}/ci.duckdb
+          METRICS_DUCKDB_PATH: ${{ env.DUCKDB_PATH }}
         run: |
           pip install -e ".[dev]"
           ruff check .
@@ -90,9 +120,10 @@ jobs:
       - name: Run the image and call it
         run: |
           docker run -d --name api -p 8080:8080 -e WAREHOUSE=duckdb -e DUCKDB_PATH=/w/ci.duckdb \
-            -v "${{ github.workspace }}/ci.duckdb:/w/ci.duckdb:ro" metrics-api:ci
+            -v "$DUCKDB_PATH:/w/ci.duckdb:ro" metrics-api:ci
           for i in $(seq 1 30); do curl -sf localhost:8080/health && break; sleep 1; done
           curl -sf localhost:8080/kpis | head -c 300
+          curl -sf localhost:8080/forecast | head -c 300
           docker logs api
 
   memo:

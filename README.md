@@ -2,7 +2,7 @@
 
 An automated weekly metrics review of the LLM API market, built the way a finance analytics team would run one: public usage data in, governed metric definitions in dbt, a weekly memo explaining what moved and why, and two dashboards (Hex and Tableau) that read the same numbers.
 
-> **Status: in progress.** Days 1-4, 6 and 7 of 12: ingest, dbt (raw data to governed metrics and a price-volume-mix spend bridge, 73 tests on the full history), a read-only metrics API and a Claude-drafted weekly memo with a number check, all running locally in containers. Cloud deployment (day 5) is deferred until the local services are done; the forecast, dashboards and portal are not built yet.
+> **Status: in progress.** Days 1-4 and 6-8 of 12: ingest, dbt (raw data to governed metrics and a price-volume-mix spend bridge), frozen weekly forecasts with calibrated intervals, a read-only metrics API and a Claude-drafted weekly memo with a number check, all running locally in containers. Cloud deployment (day 5) is deferred until the local services are done; the dashboards and portal are not built yet.
 
 ## What it answers each week
 
@@ -18,7 +18,7 @@ Seven containerized services on Google Cloud Run, sharing one BigQuery warehouse
 | --- | --- | --- |
 | `ingest`: OpenRouter rankings and model prices to the raw layer | Cloud Run job | Built, tested |
 | `transform`: dbt staging, price history, marts, metrics | Cloud Run job | Built, tested; runs locally in Docker |
-| `analysis`: frozen forecasts (the spend bridge lives in dbt) | Cloud Run job | Planned |
+| `analysis`: frozen forecasts (the spend bridge lives in dbt) | Cloud Run job | Built, tested; runs locally in Docker |
 | `export`: metrics to a Google Sheet for Tableau Public | Cloud Run job | Planned |
 | `metrics-api`: read-only FastAPI over the metrics | Cloud Run service | Built, tested; runs locally in Docker |
 | `memo`: weekly memo drafted by Claude, checked against the data | Cloud Run job | Built, tested; runs locally in Docker |
@@ -38,16 +38,18 @@ docker compose run --rm ingest prices
 With `SINK=local`, raw data lands as JSON Lines under `data/raw/`, one file per date. Reruns replace a date's file rather than duplicating it; the BigQuery sink does the same with a transactional partition swap.
 
 ```bash
-docker compose run --rm transform build           # dbt build into the warehouse volume
+docker compose run --rm transform                 # dbt build into the warehouse volume
+docker compose run --rm analysis                  # freeze this week's forecasts
+docker compose run --rm transform-post            # dbt build of the forecast-vs-actual views
 ```
 
 The same dbt project runs on DuckDB locally and in CI (`--target local`) and on BigQuery in production (`--target bigquery`).
 
 ```bash
-docker compose up                                 # ingest, dbt build, then the API on :8080
+docker compose up                                 # ingest, dbt, forecasts, dbt, then the API on :8080
 ```
 
-The API's interactive docs are at http://localhost:8080/docs. Endpoints: `/as-of`, `/kpis`, `/kpis/history`, `/providers`, `/bridge`; each takes `week=` (a Monday) and defaults to the latest complete week. It reads only the `metrics` views, so it cannot disagree with the dashboards or the memo.
+The API's interactive docs are at http://localhost:8080/docs. Endpoints: `/as-of`, `/kpis`, `/kpis/history`, `/providers`, `/bridge` (each takes `week=`, a Monday, and defaults to the latest complete week), `/forecast` (latest forecast and track record) and `/forecast/history`. It reads only the `metrics` views, so it cannot disagree with the dashboards or the memo.
 
 ## Data quality, by design
 
@@ -76,7 +78,7 @@ Provider token share and spend share are the same metrics for one provider divid
 
 ## The weekly memo
 
-Claude drafts the memo from a facts file built from the metrics API; it is told to use only numbers that appear there, copied exactly. A checker then extracts every number and date from the draft and rejects the memo if any is missing from the facts, so a rounded, added-up or invented figure cannot reach a reader. An analyst edits each draft before it is merged into [`memos/`](memos/). See [`memos/README.md`](memos/README.md).
+Claude drafts the memo from a facts file built from the metrics API; it is told to use only numbers that appear there, copied exactly. Each memo also reports the week against the forecast frozen a week earlier ("Against plan"). A checker then extracts every number and date from the draft and rejects the memo if any is missing from the facts, so a rounded, added-up or invented figure cannot reach a reader. An analyst edits each draft before it is merged into [`memos/`](memos/). See [`memos/README.md`](memos/README.md).
 
 ## Why spend moved: the bridge
 
@@ -87,6 +89,25 @@ Each week's change in implied spend splits into three parts, per model, that add
 - **Price:** a model's own price changed.
 
 For the week of 2026-10-19, implied spend rose $17.8M: +$24.9M from volume and -$7.1M from mix as traffic shifted toward cheaper models. Anthropic added $16.6M; StepFun lost $13.7M of share. Price effects are measured only from 2026-10-28, when daily price snapshots began; before that, prices are backfilled and constant.
+
+## Are we on plan: frozen forecasts
+
+The "plan" is a statistical forecast, because there is no budget for a public market. Each week the `analysis` service forecasts tokens and implied spend 1 to 4 weeks ahead and appends them to `analysis.forecast_frozen`. A stored forecast is never rewritten, even when the data behind it is revised, so the comparison with actuals is fair. dbt then joins forecasts to actuals in `metrics.forecast_vs_actual` and scores them in `metrics.forecast_accuracy`.
+
+- **Models:** naive, drift and a log-linear trend on log values. Each week picks the model with the lowest error over the previous 26 weeks, using only errors that were knowable at the time. A test proves every forecast equals the one made from history truncated at its origin.
+- **Intervals:** split-conformal 90% intervals from the same 26 weeks of backtest errors, per horizon. No interval is shown until 9 errors exist.
+- **Backfill:** on the first run, forecasts for past weeks are rebuilt from history without lookahead and flagged `is_backfill`; accuracy is reported for all forecasts and for live ones only.
+
+Track record on the full history (backfilled forecasts, weeks through 2026-10-19):
+
+| Horizon | Tokens: inside 90% interval | Tokens: mean abs. error | Implied spend: inside 90% interval | Implied spend: mean abs. error |
+| --- | --- | --- | --- | --- |
+| 1 week | 93% | 9.6% | 87% | 11.4% |
+| 2 weeks | 94% | 16.1% | 86% | 16.7% |
+| 3 weeks | 88% | 21.1% | 85% | 19.0% |
+| 4 weeks | 85% | 24.6% | 87% | 23.1% |
+
+Two honest readings. Coverage slips below 90% at longer horizons and for spend, because the market's growth rate keeps changing and the calibration window lags it. And forecasts run low on average (actuals beat the forecast by 2% at 1 week and 12% at 4 weeks for tokens): growth has been accelerating, which a drift model trails by design. Both are reported, not tuned away.
 
 ## Pricing coverage
 

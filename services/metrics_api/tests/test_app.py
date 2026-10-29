@@ -162,3 +162,41 @@ def test_parameter_markers_translate_for_each_backend():
         == "select * from {metrics}.t where week_start = $week and x >= $start_date"
     )
     assert PARAM.sub(r"@\1", sql).endswith("@week and x >= @start_date")
+
+
+def test_forecast_returns_latest_points_and_accuracy(make_client):
+    point = {
+        "metric": "tokens",
+        "origin_week": WEEK,
+        "target_week": date(2026, 10, 26),
+        "horizon_weeks": 1,
+        "model": "drift",
+        "point": 2.0e14,
+        "lower_bound": 1.7e14,
+        "upper_bound": 2.3e14,
+        "interval_level": 0.9,
+        "actual": None,
+    }
+    acc = {
+        "metric": "tokens",
+        "horizon_weeks": 1,
+        "n_evaluated": 82,
+        "n_with_interval": 73,
+        "coverage": 0.93,
+        "mean_abs_pct_error": 0.096,
+        "mean_pct_error": 0.024,
+        "n_live_evaluated": 0,
+        "live_coverage": None,
+        "live_mean_abs_pct_error": None,
+        "first_origin_week": date(2025, 3, 24),
+        "last_target_week": WEEK,
+    }
+    client, _ = make_client({"forecast_latest": [point], "forecast_accuracy": [acc]})
+    body = client.get("/forecast").json()
+    assert body["forecasts"][0]["lower_bound"] == 1.7e14
+    assert body["accuracy"][0]["coverage"] == 0.93
+
+
+def test_forecast_503_before_the_analysis_service_has_run(make_client):
+    client, _ = make_client({"forecast_latest": [], "forecast_accuracy": []})
+    assert client.get("/forecast").status_code == 503

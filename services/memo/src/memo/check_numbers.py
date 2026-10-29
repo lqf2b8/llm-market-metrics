@@ -37,6 +37,7 @@ NUMBER_WORDS = re.compile(
 REQUIRED_SECTIONS = [
     "## Headline",
     "## What moved and why",
+    "## Against plan",
     "## Providers",
     "## What to watch next week",
     "## Data notes",

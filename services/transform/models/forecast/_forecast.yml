@@ -1,0 +1,69 @@
+version: 2
+
+# These models read the analysis service's output, so they build in a second dbt pass:
+#   dbt build --exclude tag:post_analysis   ->   python -m analysis   ->   dbt build --select tag:post_analysis
+
+sources:
+  - name: analysis
+    description: Tables written by the analysis service.
+    schema: "{{ env_var('BQ_ANALYSIS_DATASET', 'analysis') }}"
+    tables:
+      - name: forecast_frozen
+        config:
+          tags: [post_analysis]
+        description: >
+          Append-only weekly forecasts. A (metric, origin_week) row is written once and never
+          rewritten, so later data revisions cannot flatter past forecasts. is_backfill marks
+          forecasts reconstructed from history on first run (still lookahead-free) rather than
+          made live in the week they name.
+        data_tests:
+          - unique_combination_of_columns:
+              arguments:
+                combination_of_columns: [metric, origin_week, horizon_weeks]
+
+models:
+  - name: forecast_vs_actual
+    description: >
+      Every frozen forecast with the actual it targeted, once that week is in (complete for
+      tokens; spend-reliable for implied spend). One row per (metric, origin_week, horizon).
+    config:
+      tags: [post_analysis]
+      meta:
+        owner: Lucas Fields
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [metric, origin_week, horizon_weeks]
+      - expression_is_true:
+          arguments:
+            expression: "lower_bound is null or (lower_bound <= point and point <= upper_bound)"
+    columns:
+      - name: metric
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [tokens, implied_spend_usd]
+      - name: actual
+        description: Null until the target week is in.
+      - name: is_covered
+        description: Actual fell inside the 90% interval. Null without an actual or interval.
+
+  - name: forecast_accuracy
+    description: >
+      Interval coverage and error by metric and horizon, over all evaluated forecasts and over
+      live (non-backfill) forecasts only. Coverage near 0.90 means the intervals are honest.
+    config:
+      tags: [post_analysis]
+      meta:
+        owner: Lucas Fields
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [metric, horizon_weeks]
+
+  - name: forecast_latest
+    description: The most recent forecast for each metric, with any actuals already in.
+    config:
+      tags: [post_analysis]
+      meta:
+        owner: Lucas Fields

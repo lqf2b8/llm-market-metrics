@@ -19,6 +19,9 @@ One or two sentences: the single most important thing that changed this week, wi
 ## What moved and why
 The spend bridge: total change, then volume, mix and price, then the two or three providers that drove it and through which effect. If the price effect is $0, say so once and give the price-effect note; do not list $0 price effects per provider.
 
+## Against plan
+From `against_plan`. "Plan" here means the frozen statistical forecast, not a budget or target; say "forecast", never "target" or "budget". For each metric in `this_week_vs_forecast`: the forecast made the week before, its range, the actual, and whether it landed inside the range. Then next week's forecast with its range. Then the one-week-ahead track record in one sentence. If `available` is false, say in one sentence that forecasts are not yet available. Do not explain misses; the data does not show why.
+
 ## Providers
 Who holds spend and who holds tokens; the largest pricing-power gap (spend share versus paid-token share).
 

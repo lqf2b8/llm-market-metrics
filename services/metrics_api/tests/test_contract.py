@@ -32,6 +32,22 @@ def test_every_endpoint_answers(client):
         assert resp.status_code == 200, (path, resp.text)
 
 
+def test_forecast_answers_when_forecasts_exist(client):
+    resp = client.get("/forecast")
+    if resp.status_code == 503:
+        pytest.skip("no forecasts in this warehouse")
+    assert resp.status_code == 200, resp.text
+    for f in resp.json()["forecasts"]:
+        assert f["lower_bound"] is None or f["lower_bound"] <= f["point"] <= f["upper_bound"]
+    latest = resp.json()["forecasts"][0]
+    rows = client.get(
+        "/forecast/history",
+        params={"metric": latest["metric"], "origin_week": latest["origin_week"]},
+    ).json()
+    assert [r["horizon_weeks"] for r in rows] == [1, 2, 3, 4]
+    assert client.get("/forecast/history", params={"horizon_weeks": 1}).status_code == 200
+
+
 def test_provider_shares_sum_to_one(client):
     rows = client.get("/providers").json()
     assert sum(r["token_share"] for r in rows) == pytest.approx(1.0)

@@ -5,9 +5,10 @@
 #   docker compose run --rm ingest probe              # day-1 checks against the live API
 #   docker compose run --rm ingest rankings --backfill
 #   docker compose run --rm ingest daily
-#   docker compose run --rm transform build           # dbt build into the warehouse volume
-#   docker compose run --rm transform test            # dbt tests only
-#   docker compose up                                 # ingest, dbt build, then serve the API
+#   docker compose run --rm transform                 # dbt build into the warehouse volume
+#   docker compose run --rm analysis                  # freeze this week's forecasts
+#   docker compose run --rm transform-post            # dbt build of the forecast views
+#   docker compose up                                 # ingest, dbt, forecasts, dbt, then the API
 #   open http://localhost:8080/docs                   # metrics API, interactive docs
 #   docker compose run --rm memo                      # draft this week's memo (starts the API if needed)
 
@@ -33,10 +34,35 @@ services:
       - ./data:/data:ro
       - warehouse:/warehouse
 
+  analysis:
+    build: ./services/analysis
+    depends_on:
+      transform:
+        condition: service_completed_successfully
+    environment:
+      WAREHOUSE: duckdb
+      DUCKDB_PATH: /warehouse/warehouse.duckdb
+    volumes:
+      - warehouse:/warehouse
+
+  transform-post:               # dbt's second pass: forecast-vs-actual views over analysis output
+    build: ./services/transform
+    command: ["build", "--select", "tag:post_analysis"]
+    depends_on:
+      analysis:
+        condition: service_completed_successfully
+    environment:
+      DBT_TARGET: local
+      RAW_DATA_DIR: /data/raw
+      DUCKDB_PATH: /warehouse/warehouse.duckdb
+    volumes:
+      - ./data:/data:ro
+      - warehouse:/warehouse
+
   metrics-api:
     build: ./services/metrics_api
     depends_on:
-      transform:
+      transform-post:
         condition: service_completed_successfully
     environment:
       WAREHOUSE: duckdb

@@ -18,4 +18,6 @@ RUN chown app /app
 USER app
 
 ENTRYPOINT ["dbt"]
-CMD ["build"]
+# First pass. The forecast models read the analysis service's output, so they build in a
+# second pass after it runs: `dbt build --select tag:post_analysis`.
+CMD ["build", "--exclude", "tag:post_analysis"]

@@ -34,7 +34,23 @@ def build_facts(api: MetricsApi, week: str | None = None) -> dict[str, Any]:
     history = api.get("/kpis/history")
     providers = api.get("/providers", week=week)
     bridge = api.get("/bridge", week=week)
-    return assemble(as_of, kpis, history, providers, bridge)
+    return assemble(as_of, kpis, history, providers, bridge, fetch_plan(api, week))
+
+
+def fetch_plan(api: MetricsApi, week: str) -> dict[str, Any] | None:
+    """Forecasts for this week (made a week earlier), from this week, and the track record.
+    None if the analysis service has not produced forecasts yet."""
+    try:
+        accuracy = api.get("/forecast")["accuracy"]
+    except requests.HTTPError as err:
+        if err.response is not None and err.response.status_code in (404, 503):
+            return None
+        raise
+    return {
+        "for_this_week": api.get("/forecast/history", target_week=week, horizon_weeks=1),
+        "for_next_week": api.get("/forecast/history", origin_week=week, horizon_weeks=1),
+        "accuracy": accuracy,
+    }
 
 
 def assemble(
@@ -43,6 +59,7 @@ def assemble(
     history: list[dict[str, Any]],
     providers: list[dict[str, Any]],
     bridge: dict[str, Any],
+    plan: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     week = kpis["week_start"]
     recent = [h for h in history if h["week_start"] <= week][-HISTORY_WEEKS:]
@@ -114,6 +131,7 @@ def assemble(
             }
             for p in gaps
         ],
+        "against_plan": against_plan(plan),
         "recent_weeks": [
             {
                 "week_start": h["week_start"],
@@ -129,4 +147,73 @@ def assemble(
             "an index, not revenue. Shares and changes are robust to the split; the level is not.",
             "Token counts use each provider's tokenizer and are not strictly comparable.",
         ],
+    }
+
+
+METRIC_LABELS = {
+    "tokens": ("tokens", fmt.tokens),
+    "implied_spend_usd": ("implied spend", fmt.money),
+}
+PLAN_NOTE = (
+    "The plan is a statistical forecast, frozen the week it was made and never revised. "
+    "Ranges are 90% prediction intervals. Implied spend is forecast only from weeks where "
+    "spend is reliable."
+)
+
+
+def against_plan(plan: dict[str, Any] | None) -> dict[str, Any]:
+    if plan is None:
+        return {"available": False, "note": "No forecasts have been produced yet."}
+
+    def label(row: dict[str, Any]) -> tuple[str, Any]:
+        return METRIC_LABELS[row["metric"]]
+
+    def forecast_range(row: dict[str, Any]) -> dict[str, Any]:
+        name, show = label(row)
+        if row["lower_bound"] is None:
+            return {"forecast": show(row["point"]), "range_low": None, "range_high": None}
+        return {
+            "forecast": show(row["point"]),
+            "range_low": show(row["lower_bound"]),
+            "range_high": show(row["upper_bound"]),
+        }
+
+    this_week = []
+    for row in plan["for_this_week"]:
+        name, show = label(row)
+        entry = {"metric": name, "forecast_made_week_of": row["origin_week"], **forecast_range(row)}
+        if row["actual"] is not None:
+            entry["actual"] = show(row["actual"])
+            entry["actual_vs_forecast"] = fmt.signed_pct(row["actual"] / row["point"] - 1)
+            if row["lower_bound"] is not None:
+                inside = row["lower_bound"] <= row["actual"] <= row["upper_bound"]
+                entry["result"] = (
+                    "inside the range"
+                    if inside
+                    else (
+                        "above the range"
+                        if row["actual"] > row["upper_bound"]
+                        else "below the range"
+                    )
+                )
+        this_week.append(entry)
+
+    return {
+        "available": True,
+        "this_week_vs_forecast": this_week,
+        "next_week_forecast": [
+            {"metric": label(r)[0], "week_of": r["target_week"], **forecast_range(r)}
+            for r in plan["for_next_week"]
+        ],
+        "track_record_one_week_ahead": [
+            {
+                "metric": METRIC_LABELS[a["metric"]][0],
+                "weeks_with_a_range": a["n_with_interval"],
+                "share_of_actuals_inside_range": fmt.pct(a["coverage"]),
+                "average_miss": fmt.pct(a["mean_abs_pct_error"]),
+            }
+            for a in plan["accuracy"]
+            if a["horizon_weeks"] == 1 and a["coverage"] is not None
+        ],
+        "note": PLAN_NOTE,
     }

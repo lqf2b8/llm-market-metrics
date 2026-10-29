@@ -1,0 +1,152 @@
+{
+  "accuracy": [
+    {
+      "metric": "implied_spend_usd",
+      "horizon_weeks": 1,
+      "n_evaluated": 54,
+      "n_with_interval": 45,
+      "coverage": 0.8666666666666667,
+      "mean_abs_pct_error": 0.11418672606571986,
+      "mean_pct_error": 0.0358750277857038,
+      "n_live_evaluated": 0,
+      "live_coverage": null,
+      "live_mean_abs_pct_error": null
+    },
+    {
+      "metric": "implied_spend_usd",
+      "horizon_weeks": 2,
+      "n_evaluated": 53,
+      "n_with_interval": 43,
+      "coverage": 0.8604651162790697,
+      "mean_abs_pct_error": 0.16705621217378802,
+      "mean_pct_error": 0.05359620312419604,
+      "n_live_evaluated": 0,
+      "live_coverage": null,
+      "live_mean_abs_pct_error": null
+    },
+    {
+      "metric": "implied_spend_usd",
+      "horizon_weeks": 3,
+      "n_evaluated": 52,
+      "n_with_interval": 41,
+      "coverage": 0.8536585365853658,
+      "mean_abs_pct_error": 0.18999221882178857,
+      "mean_pct_error": 0.07228922612854048,
+      "n_live_evaluated": 0,
+      "live_coverage": null,
+      "live_mean_abs_pct_error": null
+    },
+    {
+      "metric": "implied_spend_usd",
+      "horizon_weeks": 4,
+      "n_evaluated": 51,
+      "n_with_interval": 39,
+      "coverage": 0.8717948717948718,
+      "mean_abs_pct_error": 0.23062329881508403,
+      "mean_pct_error": 0.09068360148178044,
+      "n_live_evaluated": 0,
+      "live_coverage": null,
+      "live_mean_abs_pct_error": null
+    },
+    {
+      "metric": "tokens",
+      "horizon_weeks": 1,
+      "n_evaluated": 82,
+      "n_with_interval": 73,
+      "coverage": 0.9315068493150684,
+      "mean_abs_pct_error": 0.09570459627271173,
+      "mean_pct_error": 0.023907351274936046,
+      "n_live_evaluated": 0,
+      "live_coverage": null,
+      "live_mean_abs_pct_error": null
+    },
+    {
+      "metric": "tokens",
+      "horizon_weeks": 2,
+      "n_evaluated": 81,
+      "n_with_interval": 71,
+      "coverage": 0.9436619718309859,
+      "mean_abs_pct_error": 0.1607218807122022,
+      "mean_pct_error": 0.05218349263249243,
+      "n_live_evaluated": 0,
+      "live_coverage": null,
+      "live_mean_abs_pct_error": null
+    },
+    {
+      "metric": "tokens",
+      "horizon_weeks": 3,
+      "n_evaluated": 80,
+      "n_with_interval": 69,
+      "coverage": 0.8840579710144928,
+      "mean_abs_pct_error": 0.2106758923580856,
+      "mean_pct_error": 0.08390061183131965,
+      "n_live_evaluated": 0,
+      "live_coverage": null,
+      "live_mean_abs_pct_error": null
+    },
+    {
+      "metric": "tokens",
+      "horizon_weeks": 4,
+      "n_evaluated": 79,
+      "n_with_interval": 67,
+      "coverage": 0.8507462686567164,
+      "mean_abs_pct_error": 0.24584205853185015,
+      "mean_pct_error": 0.11900279623546715,
+      "n_live_evaluated": 0,
+      "live_coverage": null,
+      "live_mean_abs_pct_error": null
+    }
+  ],
+  "for_this_week": [
+    {
+      "metric": "implied_spend_usd",
+      "origin_week": "2026-10-12",
+      "target_week": "2026-10-19",
+      "horizon_weeks": 1,
+      "model": "drift",
+      "point": 169039971.79258183,
+      "lower_bound": 134580892.18427292,
+      "upper_bound": 212322207.1117765,
+      "interval_level": 0.9,
+      "actual": 176891185.32879043
+    },
+    {
+      "metric": "tokens",
+      "origin_week": "2026-10-12",
+      "target_week": "2026-10-19",
+      "horizon_weeks": 1,
+      "model": "drift",
+      "point": 176015140698630.03,
+      "lower_bound": 150785990508212.62,
+      "upper_bound": 205465571773202.03,
+      "interval_level": 0.9,
+      "actual": 188039305363456.0
+    }
+  ],
+  "for_next_week": [
+    {
+      "metric": "implied_spend_usd",
+      "origin_week": "2026-10-19",
+      "target_week": "2026-10-26",
+      "horizon_weeks": 1,
+      "model": "drift",
+      "point": 190038306.89509833,
+      "lower_bound": 151298681.72548616,
+      "upper_bound": 238697110.08507815,
+      "interval_level": 0.9,
+      "actual": null
+    },
+    {
+      "metric": "tokens",
+      "origin_week": "2026-10-19",
+      "target_week": "2026-10-26",
+      "horizon_weeks": 1,
+      "model": "drift",
+      "point": 200399408288386.16,
+      "lower_bound": 171675136332514.47,
+      "upper_bound": 233929756517276.16,
+      "interval_level": 0.9,
+      "actual": null
+    }
+  ]
+}

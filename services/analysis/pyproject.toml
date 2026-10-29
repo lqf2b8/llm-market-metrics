@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llm-market-metrics-analysis"
+version = "0.1.0"
+description = "Frozen weekly forecasts with split-conformal prediction intervals"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=1.26",
+    "duckdb>=1.1",
+]
+
+[project.optional-dependencies]
+bigquery = ["google-cloud-bigquery>=3.20"]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]

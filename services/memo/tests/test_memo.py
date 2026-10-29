@@ -21,7 +21,12 @@ def load(name: str):
 @pytest.fixture(scope="module")
 def facts():
     return assemble(
-        load("as-of"), load("kpis"), load("kpis_history"), load("providers"), load("bridge")
+        load("as-of"),
+        load("kpis"),
+        load("kpis_history"),
+        load("providers"),
+        load("bridge"),
+        load("forecast_plan"),
     )
 
 
@@ -73,6 +78,44 @@ def test_facts_from_real_api_responses(facts):
     assert all(p["provider"] != "other" for p in facts["providers_by_spend"])
     assert len(facts["recent_weeks"]) == 8
     assert facts["recent_weeks"][-1]["week_start"] == "2026-10-19"
+
+
+def test_against_plan_compares_the_week_with_the_forecast_made_a_week_earlier(facts):
+    plan = facts["against_plan"]
+    assert plan["available"] is True
+    tokens = next(e for e in plan["this_week_vs_forecast"] if e["metric"] == "tokens")
+    assert tokens == {
+        "metric": "tokens",
+        "forecast_made_week_of": "2026-10-12",
+        "forecast": "176.0T",
+        "range_low": "150.8T",
+        "range_high": "205.5T",
+        "actual": "188.0T",
+        "actual_vs_forecast": "+6.8%",
+        "result": "inside the range",
+    }
+    spend_next = next(e for e in plan["next_week_forecast"] if e["metric"] == "implied spend")
+    assert spend_next["week_of"] == "2026-10-26"
+    assert (spend_next["range_low"], spend_next["range_high"]) == ("$151.3M", "$238.7M")
+    assert {t["metric"] for t in plan["track_record_one_week_ahead"]} == {
+        "tokens",
+        "implied spend",
+    }
+
+
+def test_against_plan_without_forecasts_says_so():
+    facts = assemble(
+        load("as-of"), load("kpis"), load("kpis_history"), load("providers"), load("bridge")
+    )
+    assert facts["against_plan"]["available"] is False
+
+
+def test_check_accepts_an_against_plan_paragraph(facts):
+    draft = (
+        "The forecast made in the week of 2026-10-12 was 176.0T tokens, with a range of "
+        "150.8T to 205.5T. The actual was 188.0T, +6.8% against forecast and inside the range."
+    )
+    assert number_problems(draft, facts) == []
 
 
 def test_prompt_embeds_the_facts(facts):

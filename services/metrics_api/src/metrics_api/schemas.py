@@ -85,3 +85,40 @@ class SpendBridge(BaseModel):
 
 class Envelope(BaseModel):
     source: str = SOURCE
+
+
+class ForecastPoint(BaseModel):
+    metric: str
+    origin_week: date = Field(description="Last complete week the forecast could see")
+    target_week: date
+    horizon_weeks: int
+    model: str = Field(description="naive, drift or loglinear; chosen on recent backtest error")
+    point: float
+    lower_bound: float | None = Field(description="None until enough backtest errors exist")
+    upper_bound: float | None
+    interval_level: float
+    actual: float | None = Field(description="Filled in once the target week is in")
+
+
+class ForecastAccuracy(BaseModel):
+    metric: str
+    horizon_weeks: int
+    n_evaluated: int
+    n_with_interval: int
+    coverage: float | None = Field(description="Share of actuals inside the interval")
+    mean_abs_pct_error: float | None
+    mean_pct_error: float | None = Field(description="> 0 means forecasts ran low")
+    n_live_evaluated: int
+    live_coverage: float | None
+    live_mean_abs_pct_error: float | None
+
+
+class Forecasts(BaseModel):
+    forecasts: list[ForecastPoint]
+    accuracy: list[ForecastAccuracy]
+    note: str = (
+        "Forecasts are frozen when made and never revised. Intervals are split-conformal at "
+        "90%, calibrated on the last 26 weeks of backtest errors. Accuracy includes backfilled "
+        "forecasts (rebuilt from history without lookahead); the live_* fields count only "
+        "forecasts made in real time."
+    )

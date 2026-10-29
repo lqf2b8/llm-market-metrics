@@ -15,7 +15,17 @@ from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from . import warehouse as wh
-from .schemas import SOURCE, AsOf, BridgeProvider, ProviderWeek, SpendBridge, WeeklyKpis
+from .schemas import (
+    SOURCE,
+    AsOf,
+    BridgeProvider,
+    ForecastAccuracy,
+    ForecastPoint,
+    Forecasts,
+    ProviderWeek,
+    SpendBridge,
+    WeeklyKpis,
+)
 
 app = FastAPI(
     title="LLM API Market Metrics",
@@ -145,3 +155,60 @@ def bridge(db: Warehouse, week: WeekParam = None) -> SpendBridge:
         **{k: v for k, v in totals[0].items() if k in fields},
         providers=[BridgeProvider(**r) for r in by_provider],
     )
+
+
+@app.get("/forecast", response_model=Forecasts)
+def forecast(db: Warehouse) -> Forecasts:
+    """The latest frozen forecast for each metric, 1-4 weeks ahead, and the track record."""
+    points = db.query(
+        """
+        select metric, origin_week, target_week, horizon_weeks, model, point,
+            lower_bound, upper_bound, interval_level, actual
+        from {metrics}.forecast_latest
+        order by metric, horizon_weeks
+        """
+    )
+    if not points:
+        raise HTTPException(503, "No forecasts yet; run the analysis service")
+    accuracy = db.query("select * from {metrics}.forecast_accuracy order by metric, horizon_weeks")
+    fields = set(ForecastAccuracy.model_fields)
+    return Forecasts(
+        forecasts=[ForecastPoint(**r) for r in points],
+        accuracy=[
+            ForecastAccuracy(**{k: v for k, v in r.items() if k in fields}) for r in accuracy
+        ],
+    )
+
+
+@app.get("/forecast/history", response_model=list[ForecastPoint])
+def forecast_history(
+    db: Warehouse,
+    metric: Annotated[str | None, Query(description="tokens or implied_spend_usd")] = None,
+    origin_week: Annotated[
+        date | None, Query(description="Week the forecast was made from")
+    ] = None,
+    target_week: Annotated[date | None, Query(description="Week the forecast was for")] = None,
+    horizon_weeks: Annotated[int | None, Query(ge=1, le=4)] = None,
+) -> list[ForecastPoint]:
+    """Frozen forecasts with their actuals, filtered by any combination of the parameters."""
+    # Only provided filters go into the SQL: BigQuery cannot type a null parameter compared
+    # with a DATE column. Column names come from this fixed dict, never from the request.
+    filters = {
+        "metric": metric,
+        "origin_week": origin_week,
+        "target_week": target_week,
+        "horizon_weeks": horizon_weeks,
+    }
+    given = {k: v for k, v in filters.items() if v is not None}
+    where = " and ".join(f"{k} = :{k}" for k in given) or "true"
+    rows = db.query(
+        f"""
+        select metric, origin_week, target_week, horizon_weeks, model, point,
+            lower_bound, upper_bound, interval_level, actual
+        from {{metrics}}.forecast_vs_actual
+        where {where}
+        order by metric, origin_week, horizon_weeks
+        """,
+        given,
+    )
+    return [ForecastPoint(**r) for r in rows]
