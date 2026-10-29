@@ -1,8 +1,8 @@
 # LLM API Market Metrics
 
-An automated weekly metrics review of the LLM API market, built the way a finance analytics team would run one: public usage data in, governed metric definitions in dbt, a weekly memo explaining what moved and why, and two dashboards (Hex and Tableau) that read the same numbers.
+An automated weekly metrics review of the LLM API market, built the way a finance analytics team would run one: public usage data in, governed metric definitions in dbt, a weekly memo explaining what moved and why, and three dashboards (Plotly Dash, Looker Studio and Tableau) that read the same numbers.
 
-> **Status: in progress.** Days 1-4 and 6-9 of 12: ingest, dbt (raw data to governed metrics and a price-volume-mix spend bridge), frozen weekly forecasts with calibrated intervals, a read-only metrics API, a Claude-drafted weekly memo with a number check and a Hex dashboard. The services run in containers against DuckDB or BigQuery; scheduling them on Cloud Run (day 5) comes after the Tableau dashboard and the portal.
+> **Status: in progress.** Days 1-4 and 6-9 of 12: ingest, dbt (raw data to governed metrics and a price-volume-mix spend bridge), frozen weekly forecasts with calibrated intervals, a read-only metrics API, a Claude-drafted weekly memo with a number check and a Plotly Dash dashboard. The services run in containers against DuckDB or BigQuery; scheduling them on Cloud Run (day 5) comes after the Tableau dashboard and the portal.
 
 ## What it answers each week
 
@@ -12,7 +12,7 @@ An automated weekly metrics review of the LLM API market, built the way a financ
 
 ## Architecture
 
-Seven containerized services on Google Cloud Run, sharing one BigQuery warehouse. They pass data only through BigQuery tables and one read-only HTTP API.
+Eight containerized services on Google Cloud Run, sharing one BigQuery warehouse. They pass data only through BigQuery tables and one read-only HTTP API.
 
 | Service | Runs as | Status |
 | --- | --- | --- |
@@ -22,7 +22,8 @@ Seven containerized services on Google Cloud Run, sharing one BigQuery warehouse
 | `export`: metrics to a Google Sheet for Tableau Public | Cloud Run job | Planned |
 | `metrics-api`: read-only FastAPI over the metrics | Cloud Run service | Built, tested; runs locally in Docker |
 | `memo`: weekly memo drafted by Claude, checked against the data | Cloud Run job | Built, tested; runs locally in Docker |
-| `portal`: one page with a Hex / Tableau toggle and links | Cloud Run service | Planned |
+| `dashboard`: Plotly Dash app over the metrics views | Cloud Run service | Built, tested; runs locally in Docker |
+| `portal`: one page with a dashboard toggle and links | Cloud Run service | Planned |
 
 ## Run it locally
 
@@ -58,7 +59,7 @@ billing on (set a $10 budget alert; at this data size BigQuery stays inside the 
 
 ```bash
 # in .env: GCP_PROJECT=<your project id>
-docker compose -f docker-compose.yml -f docker-compose.bigquery.yml run --rm gcloud            # sign in, datasets, Hex account
+docker compose -f docker-compose.yml -f docker-compose.bigquery.yml run --rm gcloud            # sign in, datasets, read-only account
 docker compose -f docker-compose.yml -f docker-compose.bigquery.yml run --build --rm ingest copy-local # copy the local raw layer
 docker compose -f docker-compose.yml -f docker-compose.bigquery.yml up --build                  # the whole pipeline and API
 ```
@@ -66,18 +67,18 @@ docker compose -f docker-compose.yml -f docker-compose.bigquery.yml up --build  
 To skip the `-f` flags, set `COMPOSE_FILE` in `.env` (see `.env.example`).
 
 `infra/gcp/setup.sh` is safe to rerun. It authorizes the `metrics` dataset to read `marts` and
-`analysis`, so the dashboard account (`hex-reader`) can read the governed views and nothing
-else. Credentials stay in a Docker volume; the Hex key is written to `secrets/` (git-ignored)
-for you to upload and delete.
+`analysis`, so a read-only dashboard account (`hex-reader`) can read the governed views and
+nothing else. Credentials stay in a Docker volume; that account's key is written to
+`secrets/` (git-ignored).
 
 ## Dashboards
 
-The Hex app reads the BigQuery `metrics` views directly: headline tiles, the spend bridge,
-actual vs frozen forecast and provider share. Its SQL and Python live in
-[`dashboards/hex/`](dashboards/hex/) and CI runs every cell against a fixture warehouse. The
-Tableau Public workbook (day 10) shows the same views from a Google Sheet export.
+A Plotly Dash app (`services/dashboard`) serves the four views at http://localhost:8050:
+headline tiles, the spend bridge, actual vs frozen forecast, and provider share. Looker
+Studio (live on BigQuery) and Tableau Public (day 10) show the same views, so the portal can
+offer a choice. See [`dashboards/`](dashboards/).
 
-![Spend bridge](dashboards/hex/screenshots/bridge.png)
+![Dashboard](dashboards/screenshots/dash.png)
 
 ## Data quality, by design
 

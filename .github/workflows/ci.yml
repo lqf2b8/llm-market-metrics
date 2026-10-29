@@ -106,10 +106,13 @@ jobs:
       - name: dbt second pass (forecast models and their tests)
         working-directory: services/transform
         run: dbt build --target local --select tag:post_analysis
-      - name: Run every Hex cell against the warehouse
+      - name: Dashboard renders every view from the warehouse
+        working-directory: services/dashboard
+        env:
+          DASHBOARD_DUCKDB_PATH: ${{ env.DUCKDB_PATH }}
         run: |
-          pip install pandas plotly
-          python dashboards/hex/preview.py --duckdb "$DUCKDB_PATH" --out build/hex
+          pip install -e ".[dev]"
+          pytest -q
       - name: Lint and test
         working-directory: services/metrics_api
         env:
@@ -129,6 +132,29 @@ jobs:
           curl -sf localhost:8080/kpis | head -c 300
           curl -sf localhost:8080/forecast | head -c 300
           docker logs api
+
+  dashboard:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/dashboard
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: pytest -q
+      - name: Build image
+        run: docker build -t dashboard:ci .
+      - name: Run the image and load the page (no warehouse, so it must show the error, not crash)
+        run: |
+          docker run -d --name dash -p 8050:8050 -e WAREHOUSE=duckdb -e DUCKDB_PATH=/nope.duckdb dashboard:ci
+          for i in $(seq 1 30); do curl -sf localhost:8050/ >/dev/null && break; sleep 1; done
+          curl -sf localhost:8050/_dash-layout | grep -q "Could not read the metrics views"
+          docker logs dash
 
   memo:
     runs-on: ubuntu-latest

@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llm-market-metrics-dashboard"
+version = "0.1.0"
+description = "Plotly Dash dashboard over the governed LLM market metrics"
+requires-python = ">=3.11"
+dependencies = [
+    "dash>=3",
+    "gunicorn>=22",
+    "plotly>=6",
+    "pandas>=2.2",
+    "duckdb>=1.1",
+]
+
+[project.optional-dependencies]
+bigquery = ["google-cloud-bigquery>=3.20"]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+dashboard = ["assets/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]

@@ -1,0 +1,63 @@
+/* Anthropic brand guidelines (github.com/anthropics/skills, brand-guidelines):
+   Dark #141413 on Light #faf9f5, Light Gray #e8e6dc, Mid Gray #b0aea5, orange accent,
+   Poppins for headings and numbers, Lora for body text. */
+:root {
+  --dark: #141413;
+  --light: #faf9f5;
+  --light-gray: #e8e6dc;
+  --mid-gray: #b0aea5;
+  --ink-2: #5e5d58;
+  --orange: #d97757;
+  --orange-text: #b5583a;
+  --heading: Poppins, Arial, sans-serif;
+  --body: Lora, Georgia, serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--light); color: var(--dark); font-family: var(--body); }
+.page { max-width: 1180px; margin: 0 auto; padding: 32px 16px 48px; }
+h1, h2, h3, label, th { font-family: var(--heading); }
+h3 { font-size: 0.95rem; font-weight: 600; margin: 8px 0 4px; }
+h1 { font-size: 2rem; font-weight: 600; margin: 0 0 6px; letter-spacing: -0.01em; }
+h2 { font-size: 1rem; font-weight: 600; margin: 8px 0 12px; }
+a { color: var(--orange-text); }
+.meta { color: var(--ink-2); margin: 0 0 12px; font-size: 0.95rem; }
+.intro { max-width: 760px; line-height: 1.55; margin: 0 0 24px; }
+.card { border-top: 1px solid var(--light-gray); padding: 20px 0; }
+.row { display: flex; gap: 32px; align-items: flex-start; }
+.wide { flex: 2; min-width: 0; }
+.narrow { flex: 1; min-width: 260px; }
+.controls { display: flex; gap: 24px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 8px; }
+.controls label { display: block; font-size: 0.8rem; color: var(--ink-2); margin-bottom: 6px; }
+.grow { flex: 1; min-width: 240px; }
+.segmented { display: inline-flex; border: 1px solid var(--mid-gray); border-radius: 6px; overflow: hidden; }
+.segmented label { margin: 0; padding: 6px 14px; cursor: pointer; font-family: var(--heading);
+  font-size: 0.85rem; color: var(--dark); border-right: 1px solid var(--mid-gray); }
+.segmented label:last-child { border-right: none; }
+.segmented input { position: absolute; opacity: 0; pointer-events: none; }
+.segmented label:has(input:checked) { background: var(--dark); color: var(--light); }
+.segmented label:has(input:focus-visible) { outline: 2px solid var(--orange); outline-offset: -2px; }
+.moves { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.moves th { text-align: left; font-weight: 500; color: var(--ink-2); font-size: 0.8rem;
+  border-bottom: 1px solid var(--mid-gray); padding: 6px 4px; }
+.moves td { padding: 7px 4px; border-bottom: 1px solid var(--light-gray); }
+.moves .num { text-align: right; font-family: var(--heading); font-variant-numeric: tabular-nums; }
+.moves th:not(:first-child) { text-align: right; }
+.error { color: #9c3d24; }
+.note { color: var(--ink-2); font-size: 0.9rem; margin: 0 0 8px; }
+.tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; }
+.tile p { margin: 0; }
+.tile-name { color: var(--ink-2); font-size: 0.9rem; }
+.tile-value { font-family: var(--heading); font-weight: 600; font-size: 1.75rem; margin: 2px 0 !important; }
+.tile-delta { color: var(--ink-2); font-size: 0.85rem; }
+.pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.chart { width: 100%; min-width: 0; }
+.table-wrap { overflow-x: auto; }
+footer { border-top: 1px solid var(--light-gray); padding-top: 16px; color: var(--ink-2);
+  font-size: 0.85rem; line-height: 1.5; }
+@media (max-width: 760px) {
+  .tiles, .pair { grid-template-columns: 1fr; gap: 16px; }
+  .row { flex-direction: column; gap: 8px; }
+  .wide { width: 100%; }
+  .narrow { min-width: 0; width: 100%; }
+  h1 { font-size: 1.5rem; }
+}

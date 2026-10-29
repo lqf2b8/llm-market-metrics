@@ -62,5 +62,12 @@ services:
     volumes:
       - gcloud-config:/gcloud:ro
 
+  dashboard:
+    environment:
+      <<: *bigquery
+      WAREHOUSE: bigquery
+    volumes:
+      - gcloud-config:/gcloud:ro
+
 volumes:
   gcloud-config:

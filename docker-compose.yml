@@ -10,6 +10,7 @@
 #   docker compose run --rm transform-post            # dbt build of the forecast views
 #   docker compose up                                 # ingest, dbt, forecasts, dbt, then the API
 #   open http://localhost:8080/docs                   # metrics API, interactive docs
+#   open http://localhost:8050                        # dashboard (Plotly Dash)
 #   docker compose run --rm memo                      # draft this week's memo (starts the API if needed)
 
 services:
@@ -76,6 +77,19 @@ services:
       interval: 5s
       timeout: 3s
       retries: 12
+
+  dashboard:
+    build: ./services/dashboard
+    depends_on:
+      transform-post:
+        condition: service_completed_successfully
+    environment:
+      WAREHOUSE: duckdb
+      DUCKDB_PATH: /warehouse/warehouse.duckdb
+    ports:
+      - "8050:8050"
+    volumes:
+      - warehouse:/warehouse:ro
 
   memo:
     build: ./services/memo
