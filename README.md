@@ -1,6 +1,6 @@
 # LLM API Market Metrics
 
-An automated weekly metrics review of the LLM API market, built the way a finance analytics team would run one: public usage data in, governed metric definitions in dbt, a weekly memo explaining what moved and why, and three dashboards (Plotly Dash, Looker Studio and Tableau) that read the same numbers.
+An automated weekly metrics review of the LLM API market, built the way a finance analytics team would run one: public usage data in, governed metric definitions in dbt, a weekly memo explaining what moved and why, and three dashboards (Plotly Dash, Google Data Studio and Tableau) that read the same numbers.
 
 > **Status: in progress.** Days 1-4 and 6-9 of 12: ingest, dbt (raw data to governed metrics and a price-volume-mix spend bridge), frozen weekly forecasts with calibrated intervals, a read-only metrics API, a Claude-drafted weekly memo with a number check and a Plotly Dash dashboard. The services run in containers against DuckDB or BigQuery; scheduling them on Cloud Run (day 5) comes after the Tableau dashboard and the portal.
 
@@ -74,9 +74,9 @@ nothing else. Credentials stay in a Docker volume; that account's key is written
 ## Dashboards
 
 A Plotly Dash app (`services/dashboard`) serves the four views at http://localhost:8050:
-headline tiles, the spend bridge, actual vs frozen forecast, and provider share. Looker
-Studio (live on BigQuery) and Tableau Public (day 10) show the same views, so the portal can
-offer a choice. See [`dashboards/`](dashboards/).
+headline tiles, the spend bridge, actual vs frozen forecast, and provider share. A [Google Data
+Studio report](https://datastudio.google.com/reporting/9eaf6a67-8c9b-44df-bece-b5aaf7d1e203) reads the same BigQuery views live, and Tableau Public
+(day 10) will too, so the portal can offer a choice. See [`dashboards/`](dashboards/).
 
 ![Dashboard](dashboards/screenshots/dash.png)
 
