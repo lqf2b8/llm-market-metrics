@@ -32,7 +32,7 @@ def run(db_path: str, inputs: dict | None = None) -> dict:
     for cell in sorted((HERE / "python").glob("*.py")):
         if cell.name.startswith("05") and "selected_providers" not in ns:
             ns["selected_providers"] = ns["provider_options"][:5]  # the input's default
-        exec(compile(cell.read_text(), str(cell), "exec"), ns)
+        exec(compile(cell.read_text(), str(cell), "exec"), ns)  # noqa: S102 - stands in for Hex
     return {k: v for k, v in ns.items() if k.startswith("fig_")}
 
 

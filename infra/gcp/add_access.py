@@ -5,11 +5,12 @@ Exits 0 if the entry was added, 1 if an equal entry was already there.
 
 import json
 import sys
+from pathlib import Path
 
 path, entry = sys.argv[1], json.loads(sys.argv[2])
-dataset = json.load(open(path))
+dataset = json.loads(Path(path).read_text())
 access = dataset.setdefault("access", [])
 if entry in access:
     sys.exit(1)
 access.append(entry)
-json.dump(dataset, open(path, "w"))
+Path(path).write_text(json.dumps(dataset))
