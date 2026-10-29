@@ -40,6 +40,18 @@ step "Enable APIs"
 gcloud services enable bigquery.googleapis.com iam.googleapis.com \
   cloudresourcemanager.googleapis.com --quiet
 
+step "Billing"
+# Without billing, BigQuery runs in sandbox mode, which refuses the DELETE/INSERT that the
+# ingest service uses to replace a day's rows.
+gcloud services enable cloudbilling.googleapis.com --quiet
+if [ "$(gcloud billing projects describe "$GCP_PROJECT" --format='value(billingEnabled)')" != "True" ]; then
+  echo "Billing is not enabled for $GCP_PROJECT. Link a billing account at"
+  echo "  https://console.cloud.google.com/billing/linkedaccount?project=$GCP_PROJECT"
+  echo "then rerun this setup."
+  exit 1
+fi
+echo "billing enabled"
+
 step "Datasets in $LOCATION"
 for ds in "${DATASETS[@]}"; do
   if bq --project_id="$GCP_PROJECT" show --dataset "$GCP_PROJECT:$ds" >/dev/null 2>&1; then
