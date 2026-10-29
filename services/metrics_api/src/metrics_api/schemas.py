@@ -77,8 +77,9 @@ class SpendBridge(BaseModel):
     models_exiting: int
     providers: list[BridgeProvider]
     note: str = (
-        "volume + mix + price = spend change exactly. Price effects are measured only from "
-        "2026-10-28, when daily price snapshots began."
+        "volume + mix + price = spend change exactly. Daily price snapshots began on "
+        "2026-10-28; earlier usage is priced at the first snapshot, so price effects for "
+        "weeks before then are $0 by construction, not evidence that prices were flat."
     )
 
 
