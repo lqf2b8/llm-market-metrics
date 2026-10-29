@@ -30,6 +30,16 @@ def freeze(store: Store, now: datetime) -> dict[str, int]:
     for metric, flag in SERIES.items():
         weeks, values = store.series(metric, flag)
         rows = forecast.forecasts(metric, weeks, values)
+        if not rows:
+            run, _ = forecast.contiguous_tail(weeks, values)
+            log.warning(
+                "%s: no forecasts. Needs %d consecutive weeks of positive values; found %d "
+                "consecutive of %d total. Check metrics.weekly_kpis.",
+                metric,
+                forecast.MIN_TRAIN,
+                len(run),
+                len(weeks),
+            )
         latest_origin = weeks[-1] if weeks else None
         new = [
             {**r, "is_backfill": r["origin_week"] != latest_origin, "produced_at": now}
