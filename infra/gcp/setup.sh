@@ -88,4 +88,4 @@ else
 fi
 
 step "Done"
-echo "Next: docker compose -f docker-compose.yml -f docker-compose.bigquery.yml run --rm ingest copy-local"
+echo "Next: docker compose -f docker-compose.yml -f docker-compose.bigquery.yml run --build --rm ingest copy-local"

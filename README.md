@@ -59,8 +59,8 @@ billing on (set a $10 budget alert; at this data size BigQuery stays inside the 
 ```bash
 # in .env: GCP_PROJECT=<your project id>
 docker compose -f docker-compose.yml -f docker-compose.bigquery.yml run --rm gcloud            # sign in, datasets, Hex account
-docker compose -f docker-compose.yml -f docker-compose.bigquery.yml run --rm ingest copy-local # copy the local raw layer
-docker compose -f docker-compose.yml -f docker-compose.bigquery.yml up                          # the whole pipeline and API
+docker compose -f docker-compose.yml -f docker-compose.bigquery.yml run --build --rm ingest copy-local # copy the local raw layer
+docker compose -f docker-compose.yml -f docker-compose.bigquery.yml up --build                  # the whole pipeline and API
 ```
 
 To skip the `-f` flags, set `COMPOSE_FILE` in `.env` (see `.env.example`).
