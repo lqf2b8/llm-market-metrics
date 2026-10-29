@@ -59,6 +59,10 @@ for ds in "${DATASETS[@]}"; do
   else
     bq --project_id="$GCP_PROJECT" --location="$LOCATION" mk --dataset "$GCP_PROJECT:$ds"
   fi
+  # Datasets made while billing was off (sandbox mode) silently drop tables and partitions
+  # after 60 days. Clear those defaults so nothing in the warehouse expires.
+  bq --project_id="$GCP_PROJECT" update --default_table_expiration 0 \
+    --default_partition_expiration 0 "$GCP_PROJECT:$ds" >/dev/null
 done
 
 step "Reader service account"

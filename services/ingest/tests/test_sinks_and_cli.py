@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import json
+from types import SimpleNamespace
+
+import pytest
 
 import ingest.__main__ as cli
-from ingest.sinks import LocalSink, replace_partitions_sql
+from ingest.sinks import LocalSink, check_never_expires, replace_partitions_sql
 
 
 def _read_jsonl(path):
@@ -79,3 +82,15 @@ def test_copy_local_refuses_a_local_sink(monkeypatch):
         assert "SINK is local" in str(err)
     else:
         raise AssertionError("expected SystemExit")
+
+
+def test_raw_tables_that_expire_are_refused():
+    ok = SimpleNamespace(
+        table_id="t", expires=None, time_partitioning=SimpleNamespace(expiration_ms=None)
+    )
+    check_never_expires(ok)
+    sandbox = SimpleNamespace(
+        table_id="t", expires=None, time_partitioning=SimpleNamespace(expiration_ms=5_184_000_000)
+    )
+    with pytest.raises(SystemExit, match="expire"):
+        check_never_expires(sandbox)

@@ -48,6 +48,17 @@ def replace_partitions_sql(target: str, stage: str, partition_field: str) -> str
     )
 
 
+def check_never_expires(table: Any) -> None:
+    """The raw layer cannot be re-fetched (price snapshots), so refuse to write to a table
+    that BigQuery will expire. Sandbox-mode datasets set a 60-day expiry by default."""
+    partitioning = getattr(table, "time_partitioning", None)
+    if getattr(table, "expires", None) or (partitioning and partitioning.expiration_ms):
+        raise SystemExit(
+            f"{table.table_id} is set to expire, so old rows would be silently dropped. "
+            "Recreate the datasets with infra/gcp/reset.sh and infra/gcp/setup.sh."
+        )
+
+
 class BigQuerySink:
     """Loads rows into a stage table, then swaps the affected partitions in one transaction."""
 
@@ -72,7 +83,8 @@ class BigQuerySink:
         table_id = f"{self.project}.{self.dataset}.{table}"
         tbl = self._bq.Table(table_id, schema=self._schema(table))
         tbl.time_partitioning = self._bq.TimePartitioning(field=partition_field)
-        self.client.create_table(tbl, exists_ok=True)
+        tbl = self.client.create_table(tbl, exists_ok=True)
+        check_never_expires(tbl)
         return table_id
 
     def write(self, table: str, rows: list[dict[str, Any]], partition_field: str) -> int:
