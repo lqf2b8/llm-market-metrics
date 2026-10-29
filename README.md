@@ -2,7 +2,7 @@
 
 An automated weekly metrics review of the LLM API market, built the way a finance analytics team would run one: public usage data in, governed metric definitions in dbt, a weekly memo explaining what moved and why, and two dashboards (Hex and Tableau) that read the same numbers.
 
-> **Status: in progress.** Days 1-4 and 6-8 of 12: ingest, dbt (raw data to governed metrics and a price-volume-mix spend bridge), frozen weekly forecasts with calibrated intervals, a read-only metrics API and a Claude-drafted weekly memo with a number check, all running locally in containers. Cloud deployment (day 5) is deferred until the local services are done; the dashboards and portal are not built yet.
+> **Status: in progress.** Days 1-4 and 6-9 of 12: ingest, dbt (raw data to governed metrics and a price-volume-mix spend bridge), frozen weekly forecasts with calibrated intervals, a read-only metrics API, a Claude-drafted weekly memo with a number check and a Hex dashboard. The services run in containers against DuckDB or BigQuery; scheduling them on Cloud Run (day 5) comes after the Tableau dashboard and the portal.
 
 ## What it answers each week
 
@@ -50,6 +50,34 @@ docker compose up                                 # ingest, dbt, forecasts, dbt,
 ```
 
 The API's interactive docs are at http://localhost:8080/docs. Endpoints: `/as-of`, `/kpis`, `/kpis/history`, `/providers`, `/bridge` (each takes `week=`, a Monday, and defaults to the latest complete week), `/forecast` (latest forecast and track record) and `/forecast/history`. It reads only the `metrics` views, so it cannot disagree with the dashboards or the memo.
+
+## Run it on BigQuery
+
+The same containers run against BigQuery with one override file. You need a GCP project with
+billing on (set a $10 budget alert; at this data size BigQuery stays inside the free tier).
+
+```bash
+# in .env: GCP_PROJECT=<your project id>
+docker compose -f docker-compose.yml -f docker-compose.bigquery.yml run --rm gcloud            # sign in, datasets, Hex account
+docker compose -f docker-compose.yml -f docker-compose.bigquery.yml run --rm ingest copy-local # copy the local raw layer
+docker compose -f docker-compose.yml -f docker-compose.bigquery.yml up                          # the whole pipeline and API
+```
+
+To skip the `-f` flags, set `COMPOSE_FILE` in `.env` (see `.env.example`).
+
+`infra/gcp/setup.sh` is safe to rerun. It authorizes the `metrics` dataset to read `marts` and
+`analysis`, so the dashboard account (`hex-reader`) can read the governed views and nothing
+else. Credentials stay in a Docker volume; the Hex key is written to `secrets/` (git-ignored)
+for you to upload and delete.
+
+## Dashboards
+
+The Hex app reads the BigQuery `metrics` views directly: headline tiles, the spend bridge,
+actual vs frozen forecast and provider share. Its SQL and Python live in
+[`dashboards/hex/`](dashboards/hex/) and CI runs every cell against a fixture warehouse. The
+Tableau Public workbook (day 10) shows the same views from a Google Sheet export.
+
+![Spend bridge](dashboards/hex/screenshots/bridge.png)
 
 ## Data quality, by design
 

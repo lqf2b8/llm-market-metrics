@@ -45,3 +45,37 @@ def test_daily_command_writes_rankings_and_prices(tmp_path, monkeypatch, fake_cl
     snapshots = list((tmp_path / "openrouter_models_snapshot").iterdir())
     assert len(snapshots) == 1
     assert len(_read_jsonl(snapshots[0])) == 4
+
+
+class RecordingSink:
+    def __init__(self):
+        self.writes = []
+
+    def write(self, table, rows, partition_field):
+        self.writes.append((table, rows, partition_field))
+        return len(rows)
+
+
+def test_copy_local_moves_every_row_of_both_tables(tmp_path):
+    local = LocalSink(tmp_path)
+    local.write("openrouter_rankings_daily", [{"date": "2026-10-26", "v": 1}], "date")
+    local.write("openrouter_rankings_daily", [{"date": "2026-10-27", "v": 2}], "date")
+    local.write(
+        "openrouter_models_snapshot", [{"snapshot_date": "2026-10-28", "m": 1}], "snapshot_date"
+    )
+    sink = RecordingSink()
+    assert cli.copy_local(tmp_path, sink) == {
+        "openrouter_rankings_daily": 2,
+        "openrouter_models_snapshot": 1,
+    }
+    assert [w[2] for w in sink.writes] == ["date", "snapshot_date"]
+
+
+def test_copy_local_refuses_a_local_sink(monkeypatch):
+    monkeypatch.setenv("SINK", "local")
+    try:
+        cli.main(["copy-local"])
+    except SystemExit as err:
+        assert "SINK is local" in str(err)
+    else:
+        raise AssertionError("expected SystemExit")

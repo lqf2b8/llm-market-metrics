@@ -106,6 +106,10 @@ jobs:
       - name: dbt second pass (forecast models and their tests)
         working-directory: services/transform
         run: dbt build --target local --select tag:post_analysis
+      - name: Run every Hex cell against the warehouse
+        run: |
+          pip install pandas plotly
+          python dashboards/hex/preview.py --duckdb "$DUCKDB_PATH" --out build/hex
       - name: Lint and test
         working-directory: services/metrics_api
         env:

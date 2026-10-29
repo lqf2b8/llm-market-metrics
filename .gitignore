@@ -30,3 +30,6 @@ dist/
 
 # dbt local user id
 .user.yml
+
+# keys written by infra/gcp/setup.sh (upload to Hex, then delete)
+secrets/

@@ -1,0 +1,66 @@
+# Run the same services against BigQuery instead of DuckDB:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.bigquery.yml run --rm gcloud
+#   docker compose -f docker-compose.yml -f docker-compose.bigquery.yml run --rm ingest copy-local
+#   docker compose -f docker-compose.yml -f docker-compose.bigquery.yml up
+#
+# Needs GCP_PROJECT in .env. Credentials are your own Google sign-in (application default
+# credentials), kept in the gcloud-config volume that the `gcloud` service fills.
+
+x-bigquery: &bigquery
+  GCP_PROJECT: ${GCP_PROJECT:?Set GCP_PROJECT in .env}
+  BQ_LOCATION: ${BQ_LOCATION:-US}
+  GOOGLE_APPLICATION_CREDENTIALS: /gcloud/application_default_credentials.json
+  GOOGLE_CLOUD_PROJECT: ${GCP_PROJECT}
+
+services:
+  gcloud:
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:slim
+    profiles: ["tools"]
+    entrypoint: ["bash", "/setup/setup.sh"]
+    environment:
+      GCP_PROJECT: ${GCP_PROJECT:?Set GCP_PROJECT in .env}
+      BQ_LOCATION: ${BQ_LOCATION:-US}
+      CLOUDSDK_CONFIG: /gcloud
+    volumes:
+      - gcloud-config:/gcloud
+      - ./infra/gcp:/setup:ro
+      - ./secrets:/secrets
+
+  ingest:
+    environment:
+      <<: *bigquery
+      SINK: bigquery
+    volumes:
+      - gcloud-config:/gcloud:ro
+
+  transform:
+    environment:
+      <<: *bigquery
+      DBT_TARGET: bigquery
+    volumes:
+      - gcloud-config:/gcloud:ro
+
+  analysis:
+    environment:
+      <<: *bigquery
+      WAREHOUSE: bigquery
+    volumes:
+      - gcloud-config:/gcloud:ro
+
+  transform-post:
+    environment:
+      <<: *bigquery
+      DBT_TARGET: bigquery
+    volumes:
+      - gcloud-config:/gcloud:ro
+
+  metrics-api:
+    environment:
+      <<: *bigquery
+      WAREHOUSE: bigquery
+    volumes:
+      - gcloud-config:/gcloud:ro
+
+volumes:
+  gcloud-config:

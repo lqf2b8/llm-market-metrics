@@ -6,6 +6,7 @@
     python -m ingest rankings --start 2026-10-01 --end 2026-10-27
     python -m ingest prices                        # today's model price snapshot
     python -m ingest daily                         # rankings + prices, what the scheduler runs
+    python -m ingest copy-local                    # one-off: local JSON Lines -> SINK=bigquery
 
 Configuration comes from environment variables (see .env.example).
 """
@@ -18,6 +19,7 @@ import logging
 import os
 import sys
 from datetime import UTC, date, datetime, timedelta
+from pathlib import Path
 
 from . import models, probe, rankings
 from .client import OpenRouterClient
@@ -66,6 +68,28 @@ def run_prices(client: OpenRouterClient, sink: Sink, today: date, now: datetime)
     return written
 
 
+def copy_local(root: Path, sink: Sink) -> dict[str, int]:
+    """Copy every raw row written locally into another sink, table by table.
+
+    Used once when moving to BigQuery: the price history depends on daily snapshots that
+    cannot be fetched again, so they are copied rather than re-pulled.
+    """
+    written = {}
+    for table, field in (
+        (rankings.TABLE, rankings.PARTITION_FIELD),
+        (models.TABLE, models.PARTITION_FIELD),
+    ):
+        rows = [
+            json.loads(line)
+            for path in sorted((root / table).glob("*.jsonl"))
+            for line in path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+        written[table] = sink.write(table, rows, field)
+        log.info("copy-local: %s rows into %s", written[table], table)
+    return written
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="ingest")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -76,9 +100,15 @@ def main(argv: list[str] | None = None) -> int:
     rank.add_argument("--backfill", action="store_true", help="start from 2025-01-01")
     sub.add_parser("prices", help="snapshot today's model prices")
     sub.add_parser("daily", help="rankings for the last 3 days + today's prices")
+    sub.add_parser("copy-local", help="copy LOCAL_DATA_DIR's raw rows into SINK=bigquery")
     args = parser.parse_args(argv)
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+    if args.command == "copy-local":
+        if os.environ.get("SINK", "local").lower() == "local":
+            raise SystemExit("copy-local copies local files into SINK=bigquery; SINK is local")
+        copy_local(Path(os.environ.get("LOCAL_DATA_DIR", "data/raw")), make_sink())
+        return 0
     now = datetime.now(UTC)
     today = now.date()
     yesterday = today - timedelta(days=1)
