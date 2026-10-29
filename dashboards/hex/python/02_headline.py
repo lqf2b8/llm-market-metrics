@@ -15,7 +15,7 @@ fig_headline = make_subplots(rows=1, cols=3, horizontal_spacing=0.06)
 for i, (name, value, change, data, col, fmt) in enumerate(tiles, start=1):
     fig_headline.add_trace(
         go.Scatter(
-            x=data.week_start, y=data[col], mode="lines", line=dict(color=SERIES[0], width=2),
+            x=data.week_start, y=data[col], mode="lines", line=dict(color=ORANGE, width=2),
             hovertemplate="%{x|%b %d, %Y}: %{customdata}<extra></extra>",
             customdata=[fmt(v) for v in data[col]], showlegend=False,
         ),
@@ -23,21 +23,21 @@ for i, (name, value, change, data, col, fmt) in enumerate(tiles, start=1):
     )
     fig_headline.add_trace(
         go.Scatter(x=[data.week_start.iloc[-1]], y=[data[col].iloc[-1]], mode="markers",
-                   marker=dict(color=SERIES[0], size=8, line=dict(color=SURFACE, width=2)),
+                   marker=dict(color=ORANGE, size=8, line=dict(color=SURFACE, width=2)),
                    hoverinfo="skip", showlegend=False),
         row=1, col=i,
     )
     arrow = "" if pd.isna(change) else ("▲" if change > 0 else "▼" if change < 0 else "")
     delta = "n/a" if pd.isna(change) else f"{arrow} {change:+.1%} vs prior week"
     domain = fig_headline.layout[f"xaxis{'' if i == 1 else i}"].domain
-    for y, text, size, color in (
-        (1.78, name, 13, INK_2),
-        (1.40, f"<b>{value}</b>", 26, INK),
-        (1.14, delta, 13, INK_2),
+    for y, text, size, color, family in (
+        (1.78, name, 13, INK_2, BODY_FONT),
+        (1.40, f"<b>{value}</b>", 26, INK, HEADING_FONT),
+        (1.14, delta, 13, INK_2, BODY_FONT),
     ):
         fig_headline.add_annotation(
             x=domain[0], y=y, xref="paper", yref="paper", xanchor="left", yanchor="bottom",
-            showarrow=False, text=text, font=dict(size=size, color=color),
+            showarrow=False, text=text, font=dict(size=size, color=color, family=family),
         )
 base_layout(fig_headline, "", height=280)
 fig_headline.update_layout(title=None, margin=dict(l=8, r=16, t=150, b=24))

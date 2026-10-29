@@ -13,4 +13,4 @@ Usage across the top 50 models on OpenRouter, priced at list prices. **Implied s
 
 Every number here is read from the governed `metrics` views in BigQuery, the same ones the API and the weekly memo use. Code: [github.com/lqf2b8/llm-market-metrics](https://github.com/lqf2b8/llm-market-metrics)
 
-Source: OpenRouter (openrouter.ai/rankings), CC BY 4.0
+Source: OpenRouter (openrouter.ai/rankings), CC BY 4.0. An independent project, not affiliated with Anthropic or OpenRouter.

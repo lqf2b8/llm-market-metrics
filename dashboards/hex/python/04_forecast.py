@@ -17,7 +17,7 @@ fig_forecast.add_trace(go.Scatter(
 ))
 fig_forecast.add_trace(go.Scatter(
     x=f.target_week, y=f.point, mode="lines+markers", name="Forecast, frozen a week earlier",
-    line=dict(color=SERIES[0], width=2, dash="dash"), marker=dict(size=8, color=SERIES[0]),
+    line=dict(color=BLUE, width=2, dash="dash"), marker=dict(size=8, color=BLUE),
     customdata=[[fmt(p), fmt(lo) if pd.notna(lo) else "n/a", fmt(hi) if pd.notna(hi) else "n/a"]
                 for p, lo, hi in zip(f.point, f.lower_bound, f.upper_bound)],
     hovertemplate="Week of %{x|%Y-%m-%d}<br>Forecast %{customdata[0]}"

@@ -26,6 +26,15 @@ rather than the dashboard.
 python dashboards/hex/preview.py --duckdb data/warehouse.duckdb --out build/hex   # needs pandas, plotly
 ```
 
+## Style
+
+Colors and type follow Anthropic's published brand guidelines
+([anthropics/skills, brand-guidelines](https://github.com/anthropics/skills/tree/main/skills/brand-guidelines)):
+Dark `#141413` on Light `#faf9f5`, orange / blue / green accents, Poppins for headings and
+numbers, Lora for body text. The blue and green are used a step darker for contrast, and
+because orange and green are hard to tell apart with red-green colorblindness, provider lines
+also differ by dash pattern and are labeled at their ends.
+
 ## Build the app in Hex (about 30 minutes, once)
 
 Before you start: the BigQuery steps in the main README are done, so
@@ -52,7 +61,7 @@ because each cell uses names defined above it.
 | 8 | Python | `python/01_setup.py` | |
 | 9 | Input: Dropdown | options `Tokens`, `Implied spend`; default `Tokens` | `forecast_metric` |
 | 10 | Input: Dropdown | options `All tokens`, `Paid tokens`; default `Paid tokens` | `token_basis` |
-| 11 | Input: Multiselect | options from variable `provider_options`; default: the first 5 | `selected_providers` |
+| 11 | Input: Multiselect | options from variable `provider_options`; default from variable `default_providers` (top 3 by spend) | `selected_providers` |
 | 12-15 | Python | `python/02_headline.py` ... `python/05_providers.py` | |
 | 16 | Table | dataframe `bridge_providers`, format the dollar columns as currency | |
 | 17 | Markdown | the "Bottom of the app" block in `app_text.md` | |
