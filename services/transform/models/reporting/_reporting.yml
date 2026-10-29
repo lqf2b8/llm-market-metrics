@@ -1,0 +1,30 @@
+version: 2
+
+# Views shaped for BI tools with no scripting layer (Data Studio, Tableau): each is a plain
+# reshaping of a governed metrics view, never a new calculation.
+
+models:
+  - name: dash_headline
+    description: The latest complete week's headline KPIs, one row.
+    data_tests:
+      - expression_is_true:
+          arguments:
+            expression: "tokens > 0"
+  - name: dash_kpi_trend
+    description: The last 26 complete weeks; spend and price null where spend is not reliable.
+    columns:
+      - name: week_start
+        data_tests: [unique, not_null]
+  - name: dash_bridge
+    description: The latest week's spend bridge as four ordered steps for a waterfall.
+    columns:
+      - name: step_order
+        data_tests: [unique, not_null]
+  - name: dash_forecast
+    description: >
+      One-week-ahead forecasts and actuals in long format (Actual, Forecast, 90% range low
+      and high), the last 12 target weeks plus the next.
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [metric_label, target_week, series]
