@@ -1,0 +1,128 @@
+name: deploy
+
+# Builds every service image and deploys it to Cloud Run, after CI passes on main.
+# Signs in to Google with Workload Identity Federation: no service account key is stored.
+# Needs repository variables GCP_PROJECT, GCP_REGION and WIF_PROVIDER (from
+# infra/gcp/bootstrap.sh); without them this workflow skips itself.
+
+on:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write   # to request the GitHub OIDC token that Google exchanges for access
+
+env:
+  PROJECT: ${{ vars.GCP_PROJECT }}
+  REGION: ${{ vars.GCP_REGION || 'us-central1' }}
+  BQ_LOCATION: US
+
+jobs:
+  deploy:
+    if: >-
+      vars.WIF_PROVIDER != '' &&
+      (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: github-deployer@${{ vars.GCP_PROJECT }}.iam.gserviceaccount.com
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Build and push images
+        id: images
+        run: |
+          registry="$REGION-docker.pkg.dev/$PROJECT/llm-market-metrics"
+          tag="$(git rev-parse --short=12 HEAD)"
+          gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
+          for svc in ingest transform analysis metrics_api memo dashboard; do
+            image="$registry/${svc//_/-}:$tag"
+            docker build -t "$image" "services/$svc"
+            docker push "$image"
+          done
+          echo "registry=$registry" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy the metrics API
+        id: api
+        env:
+          IMAGE: ${{ steps.images.outputs.registry }}/metrics-api:${{ steps.images.outputs.tag }}
+        run: |
+          gcloud run deploy metrics-api --image "$IMAGE" --region "$REGION" --quiet \
+            --service-account "metrics-reader@$PROJECT.iam.gserviceaccount.com" \
+            --set-env-vars "WAREHOUSE=bigquery,GCP_PROJECT=$PROJECT,BQ_LOCATION=$BQ_LOCATION" \
+            --allow-unauthenticated --memory 512Mi --min-instances 0 --max-instances 2
+          url="$(gcloud run services describe metrics-api --region "$REGION" --format='value(status.url)')"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy the dashboard
+        id: dashboard
+        env:
+          IMAGE: ${{ steps.images.outputs.registry }}/dashboard:${{ steps.images.outputs.tag }}
+          API_URL: ${{ steps.api.outputs.url }}
+        run: |
+          gcloud run deploy dashboard --image "$IMAGE" --region "$REGION" --quiet \
+            --service-account "metrics-reader@$PROJECT.iam.gserviceaccount.com" \
+            --set-env-vars "WAREHOUSE=bigquery,GCP_PROJECT=$PROJECT,BQ_LOCATION=$BQ_LOCATION,API_DOCS_URL=$API_URL/docs" \
+            --allow-unauthenticated --memory 1Gi --min-instances 0 --max-instances 2
+          url="$(gcloud run services describe dashboard --region "$REGION" --format='value(status.url)')"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy the pipeline jobs
+        env:
+          REGISTRY: ${{ steps.images.outputs.registry }}
+          TAG: ${{ steps.images.outputs.tag }}
+          API_URL: ${{ steps.api.outputs.url }}
+        run: |
+          runner="pipeline-runner@$PROJECT.iam.gserviceaccount.com"
+          bq="GCP_PROJECT=$PROJECT,BQ_LOCATION=$BQ_LOCATION"
+          job() {  # job <name> <image> <flags...>
+            local name="$1" image="$2"; shift 2
+            gcloud run jobs deploy "$name" --image "$REGISTRY/$image:$TAG" --region "$REGION" \
+              --service-account "$runner" --max-retries 1 --quiet "$@"
+          }
+          job ingest ingest --args daily --task-timeout 15m \
+            --set-env-vars "SINK=bigquery,$bq" \
+            --set-secrets OPENROUTER_API_KEY=openrouter-api-key:latest
+          job transform transform --memory 2Gi --task-timeout 30m \
+            --set-env-vars "DBT_TARGET=bigquery,$bq"
+          job analysis analysis --memory 1Gi --task-timeout 15m \
+            --set-env-vars "WAREHOUSE=bigquery,$bq"
+          job transform-post transform --memory 2Gi --task-timeout 15m \
+            --args build,--select,tag:post_analysis \
+            --set-env-vars "DBT_TARGET=bigquery,$bq"
+          # Memo drafts land in a Cloud Storage bucket; the daily workflow opens a PR with them.
+          job memo memo --task-timeout 15m --max-retries 0 \
+            --set-env-vars "METRICS_API_URL=$API_URL,MEMO_DIR=/memos" \
+            --set-secrets ANTHROPIC_API_KEY=anthropic-api-key:latest \
+            --clear-volumes --clear-volume-mounts \
+            --add-volume "name=memos,type=cloud-storage,bucket=$PROJECT-memos,mount-options=uid=10001;gid=10001" \
+            --add-volume-mount volume=memos,mount-path=/memos
+
+      - name: Smoke test
+        env:
+          API_URL: ${{ steps.api.outputs.url }}
+          DASHBOARD_URL: ${{ steps.dashboard.outputs.url }}
+        run: |
+          curl -fsS "$API_URL/as-of"; echo
+          curl -fsS "$DASHBOARD_URL/" -o /dev/null
+          {
+            echo "### Deployed $(git rev-parse --short=12 HEAD)"
+            echo "- Dashboard: $DASHBOARD_URL"
+            echo "- API docs: $API_URL/docs"
+          } >> "$GITHUB_STEP_SUMMARY"

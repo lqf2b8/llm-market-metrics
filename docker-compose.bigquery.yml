@@ -4,6 +4,9 @@
 #   docker compose -f docker-compose.yml -f docker-compose.bigquery.yml run --rm ingest copy-local
 #   docker compose -f docker-compose.yml -f docker-compose.bigquery.yml up
 #
+# Once, before the first deploy to Cloud Run (service accounts, keyless GitHub sign-in, secrets):
+#   docker compose -f docker-compose.yml -f docker-compose.bigquery.yml run --rm --entrypoint bash gcloud /setup/bootstrap.sh
+#
 # Needs GCP_PROJECT in .env. Credentials are your own Google sign-in (application default
 # credentials), kept in the gcloud-config volume that the `gcloud` service fills.
 
@@ -21,7 +24,11 @@ services:
     environment:
       GCP_PROJECT: ${GCP_PROJECT:?Set GCP_PROJECT in .env}
       BQ_LOCATION: ${BQ_LOCATION:-US}
+      GCP_REGION: ${GCP_REGION:-us-central1}
       CLOUDSDK_CONFIG: /gcloud
+      # Read only by bootstrap.sh, which copies them into Secret Manager without printing them.
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     volumes:
       - gcloud-config:/gcloud
       - ./infra/gcp:/setup:ro

@@ -8,16 +8,13 @@
 # 2. Enables BigQuery and creates the datasets dbt and the services write to.
 # 3. Authorizes the `metrics` dataset to read `marts` and `analysis`, so a reader of the
 #    metrics views needs no access to anything else.
-# 4. Creates the hex-reader service account: it can run queries and read `metrics`, nothing
-#    more. Its key is written to ./secrets/hex-reader.json for you to upload to Hex.
+#
+# Deploying to Cloud Run is a separate, later step: infra/gcp/bootstrap.sh.
 set -euo pipefail
 
 : "${GCP_PROJECT:?Set GCP_PROJECT in .env}"
 LOCATION="${BQ_LOCATION:-US}"
 DATASETS=(raw staging intermediate reference marts metrics analysis)
-READER="hex-reader"
-READER_EMAIL="${READER}@${GCP_PROJECT}.iam.gserviceaccount.com"
-KEY_FILE="/secrets/hex-reader.json"
 ADC="${CLOUDSDK_CONFIG}/application_default_credentials.json"
 
 step() { printf '\n== %s\n' "$*"; }
@@ -65,18 +62,7 @@ for ds in "${DATASETS[@]}"; do
     --default_partition_expiration 0 "$GCP_PROJECT:$ds" >/dev/null
 done
 
-step "Reader service account"
-if ! gcloud iam service-accounts describe "$READER_EMAIL" >/dev/null 2>&1; then
-  gcloud iam service-accounts create "$READER" \
-    --display-name="Hex: read-only on the metrics dataset" --quiet
-  sleep 10  # new service accounts take a moment to be usable in policies
-fi
-gcloud projects add-iam-policy-binding "$GCP_PROJECT" \
-  --member="serviceAccount:$READER_EMAIL" --role=roles/bigquery.jobUser \
-  --condition=None --quiet >/dev/null
-echo "can run queries: $READER_EMAIL"
-
-step "Dataset access: metrics views may read marts and analysis; hex-reader may read metrics"
+step "Dataset access: metrics views may read marts and analysis"
 grant() {  # grant <dataset> <json access entry>
   local ds="$1" entry="$2" tmp
   tmp="$(mktemp)"
@@ -92,16 +78,6 @@ grant() {  # grant <dataset> <json access entry>
 METRICS_VIEWS="{\"dataset\": {\"dataset\": {\"projectId\": \"$GCP_PROJECT\", \"datasetId\": \"metrics\"}, \"targetTypes\": [\"VIEWS\"]}}"
 grant marts "$METRICS_VIEWS"
 grant analysis "$METRICS_VIEWS"
-grant metrics "{\"role\": \"READER\", \"userByEmail\": \"$READER_EMAIL\"}"
-
-step "Key for Hex"
-if [ -f "$KEY_FILE" ]; then
-  echo "exists: secrets/hex-reader.json"
-else
-  gcloud iam service-accounts keys create "$KEY_FILE" --iam-account="$READER_EMAIL" --quiet
-  chmod 644 "$KEY_FILE"
-  echo "wrote secrets/hex-reader.json: upload it to Hex, then delete it"
-fi
 
 step "Done"
 echo "Next: docker compose -f docker-compose.yml -f docker-compose.bigquery.yml run --build --rm ingest copy-local"

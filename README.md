@@ -2,7 +2,7 @@
 
 An automated weekly metrics review of the LLM API market, built the way a finance analytics team would run one: public usage data in, governed metric definitions in dbt, a weekly memo explaining what moved and why, and two dashboards (Plotly Dash and Google Data Studio) that read the same numbers, behind one front door that lets each visitor choose.
 
-> **Status: in progress.** Days 1-4 and 6-9 of 12: ingest, dbt (raw data to governed metrics and a price-volume-mix spend bridge), frozen weekly forecasts with calibrated intervals, a read-only metrics API, a Claude-drafted weekly memo with a number check, and a Plotly Dash front door with a toggle to the same views in Google Data Studio. The services run in containers against DuckDB or BigQuery; deploying and scheduling them on Cloud Run is next.
+> **Status: in progress.** Days 1-9 of 12: ingest, dbt (raw data to governed metrics and a price-volume-mix spend bridge), frozen weekly forecasts with calibrated intervals, a read-only metrics API, a Claude-drafted weekly memo with a number check, and a Plotly Dash front door with a toggle to the same views in Google Data Studio. The services run in containers against DuckDB locally or BigQuery, and deploy to Cloud Run from GitHub Actions on a daily schedule.
 
 ## What it answers each week
 
@@ -12,7 +12,7 @@ An automated weekly metrics review of the LLM API market, built the way a financ
 
 ## Architecture
 
-Six containerized services on Google Cloud Run, sharing one BigQuery warehouse. They pass data only through BigQuery tables and one read-only HTTP API.
+Six containerized services on Google Cloud Run, sharing one BigQuery warehouse. They pass data only through BigQuery tables and one read-only HTTP API. GitHub Actions deploys every service after CI passes on main and runs the jobs in order each day; it signs in to Google through Workload Identity Federation, so no service account key exists anywhere.
 
 | Service | Runs as | Status |
 | --- | --- | --- |
@@ -65,9 +65,34 @@ docker compose -f docker-compose.yml -f docker-compose.bigquery.yml up --build  
 To skip the `-f` flags, set `COMPOSE_FILE` in `.env` (see `.env.example`).
 
 `infra/gcp/setup.sh` is safe to rerun. It authorizes the `metrics` dataset to read `marts` and
-`analysis`, so a read-only dashboard account (`hex-reader`) can read the governed views and
-nothing else. Credentials stay in a Docker volume; that account's key is written to
-`secrets/` (git-ignored).
+`analysis`, so anything that reads the governed views needs access to nothing else.
+Credentials stay in a Docker volume, never in the repo.
+
+## Deploy to Cloud Run
+
+| Runs as | What | Service account | Can |
+| --- | --- | --- | --- |
+| Service | `metrics-api`, `dashboard` (public) | `metrics-reader` | run queries, read the `metrics` dataset |
+| Job | `ingest`, `transform`, `analysis`, `transform-post`, `memo` | `pipeline-runner` | write the warehouse datasets, read the two API keys, write memo drafts |
+| GitHub Actions | build, deploy, run jobs | `github-deployer` | only from this repository, via Workload Identity Federation |
+
+One-time setup, after the BigQuery setup above (API keys come from `.env` and go to Secret
+Manager; the script never prints them):
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.bigquery.yml run --rm --entrypoint bash gcloud /setup/bootstrap.sh
+```
+
+Then add the three repository variables it prints (`GCP_PROJECT`, `GCP_REGION`,
+`WIF_PROVIDER`) under Settings > Secrets and variables > Actions > Variables, and allow
+Actions to open pull requests (Settings > Actions > General > Workflow permissions).
+
+- [`deploy.yml`](.github/workflows/deploy.yml): after CI passes on main, builds the six
+  images, deploys the two services and five jobs, and smoke-tests the API and dashboard.
+- [`daily.yml`](.github/workflows/daily.yml): each morning runs ingest, dbt, forecasts and
+  dbt's second pass, each waiting for the last. On Tuesdays it also drafts the memo into a
+  Cloud Storage bucket and opens a pull request with it, so a person edits every memo before
+  it is published.
 
 ## Dashboards
 

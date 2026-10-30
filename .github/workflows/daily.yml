@@ -1,0 +1,84 @@
+name: daily
+
+# Runs the pipeline on Cloud Run in order: ingest, dbt, forecasts, dbt's second pass.
+# On Tuesdays it also drafts the weekly memo and opens a pull request with it for review;
+# a memo is merged only after an analyst edits it.
+
+on:
+  schedule:
+    - cron: "17 9 * * *"   # 09:17 UTC daily, after OpenRouter's day closes
+  workflow_dispatch:
+    inputs:
+      memo:
+        description: Also draft the weekly memo
+        type: boolean
+        default: false
+
+concurrency:
+  group: daily
+  cancel-in-progress: false
+
+permissions:
+  contents: write        # push the memo branch
+  pull-requests: write   # open the memo PR
+  id-token: write        # keyless sign-in to Google
+
+env:
+  PROJECT: ${{ vars.GCP_PROJECT }}
+  REGION: ${{ vars.GCP_REGION || 'us-central1' }}
+
+jobs:
+  pipeline:
+    if: vars.WIF_PROVIDER != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: github-deployer@${{ vars.GCP_PROJECT }}.iam.gserviceaccount.com
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Run the pipeline
+        run: |
+          for job in ingest transform analysis transform-post; do
+            echo "::group::$job"
+            gcloud run jobs execute "$job" --region "$REGION" --wait --quiet
+            echo "::endgroup::"
+          done
+
+      - name: Is it memo day?
+        id: when
+        run: |
+          if [ "${{ inputs.memo }}" = "true" ] || [ "$(date -u +%u)" = "2" ]; then
+            echo "memo=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Draft the weekly memo
+        if: steps.when.outputs.memo == 'true'
+        run: gcloud run jobs execute memo --region "$REGION" --wait --quiet
+
+      - name: Open a pull request with the draft
+        if: steps.when.outputs.memo == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Copy only drafts the repository does not have yet: memos already merged were edited
+          # by an analyst and must not be overwritten.
+          gcloud storage cp --recursive --no-clobber "gs://$PROJECT-memos/*" memos/
+          if [ -z "$(git status --porcelain memos)" ]; then
+            echo "No new memo drafts."; exit 0
+          fi
+          branch="memo/$(date -u +%Y-%m-%d)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git add memos
+          git commit -m "Weekly memo draft"
+          git push --force origin "$branch"
+          body="Drafted by Claude from the metrics API and checked number by number against the facts file. Edit before merging; see memos/README.md. A file named *.REJECTED.md failed the number check and lists why at the bottom."
+          gh pr view "$branch" >/dev/null 2>&1 || \
+            gh pr create --head "$branch" --title "Weekly memo draft $(date -u +%Y-%m-%d)" --body "$body"
