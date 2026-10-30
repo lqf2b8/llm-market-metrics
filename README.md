@@ -1,8 +1,8 @@
 # LLM API Market Metrics
 
-An automated weekly metrics review of the LLM API market, built the way a finance analytics team would run one: public usage data in, governed metric definitions in dbt, a weekly memo explaining what moved and why, and three dashboards (Plotly Dash, Google Data Studio and Tableau) that read the same numbers.
+An automated weekly metrics review of the LLM API market, built the way a finance analytics team would run one: public usage data in, governed metric definitions in dbt, a weekly memo explaining what moved and why, and two dashboards (Plotly Dash and Google Data Studio) that read the same numbers, behind one front door that lets each visitor choose.
 
-> **Status: in progress.** Days 1-4 and 6-9 of 12: ingest, dbt (raw data to governed metrics and a price-volume-mix spend bridge), frozen weekly forecasts with calibrated intervals, a read-only metrics API, a Claude-drafted weekly memo with a number check and a Plotly Dash dashboard. The services run in containers against DuckDB or BigQuery; scheduling them on Cloud Run (day 5) comes after the Tableau dashboard and the portal.
+> **Status: in progress.** Days 1-4 and 6-9 of 12: ingest, dbt (raw data to governed metrics and a price-volume-mix spend bridge), frozen weekly forecasts with calibrated intervals, a read-only metrics API, a Claude-drafted weekly memo with a number check, and a Plotly Dash front door with a toggle to the same views in Google Data Studio. The services run in containers against DuckDB or BigQuery; deploying and scheduling them on Cloud Run is next.
 
 ## What it answers each week
 
@@ -12,18 +12,16 @@ An automated weekly metrics review of the LLM API market, built the way a financ
 
 ## Architecture
 
-Eight containerized services on Google Cloud Run, sharing one BigQuery warehouse. They pass data only through BigQuery tables and one read-only HTTP API.
+Six containerized services on Google Cloud Run, sharing one BigQuery warehouse. They pass data only through BigQuery tables and one read-only HTTP API.
 
 | Service | Runs as | Status |
 | --- | --- | --- |
 | `ingest`: OpenRouter rankings and model prices to the raw layer | Cloud Run job | Built, tested |
 | `transform`: dbt staging, price history, marts, metrics | Cloud Run job | Built, tested; runs locally in Docker |
 | `analysis`: frozen forecasts (the spend bridge lives in dbt) | Cloud Run job | Built, tested; runs locally in Docker |
-| `export`: metrics to a Google Sheet for Tableau Public | Cloud Run job | Planned |
 | `metrics-api`: read-only FastAPI over the metrics | Cloud Run service | Built, tested; runs locally in Docker |
 | `memo`: weekly memo drafted by Claude, checked against the data | Cloud Run job | Built, tested; runs locally in Docker |
-| `dashboard`: Plotly Dash app over the metrics views | Cloud Run service | Built, tested; runs locally in Docker |
-| `portal`: one page with a dashboard toggle and links | Cloud Run service | Planned |
+| `dashboard`: the front door: Plotly Dash views, a toggle to Google Data Studio, links to code, API and memos | Cloud Run service | Built, tested; runs locally in Docker |
 
 ## Run it locally
 
@@ -75,8 +73,8 @@ nothing else. Credentials stay in a Docker volume; that account's key is written
 
 A Plotly Dash app (`services/dashboard`) serves the four views at http://localhost:8050:
 headline tiles, the spend bridge, actual vs frozen forecast, and provider share. A [Google Data
-Studio report](https://datastudio.google.com/reporting/9eaf6a67-8c9b-44df-bece-b5aaf7d1e203) reads the same BigQuery views live, and Tableau Public
-(day 10) will too, so the portal can offer a choice. See [`dashboards/`](dashboards/).
+Studio report](https://datastudio.google.com/reporting/9eaf6a67-8c9b-44df-bece-b5aaf7d1e203) reads the same BigQuery views live; the
+app's toggle switches between the two. See [`dashboards/`](dashboards/).
 
 ![Dashboard](dashboards/screenshots/dash.png)
 

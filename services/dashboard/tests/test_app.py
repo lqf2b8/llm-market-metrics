@@ -32,9 +32,9 @@ def use(monkeypatch, loader):
     monkeypatch.setattr(data, "load", loader)
 
 
-def test_layout_renders_every_view(monkeypatch):
+def test_dashboard_page_renders_every_view(monkeypatch):
     use(monkeypatch, synthetic_frames)
-    page = dash_app.layout()
+    page = dash_app.dashboard_page()
     graphs = find(page, cls_name="Graph")
     assert len(graphs) == 7  # 3 sparklines, bridge, forecast, 2 provider charts
     for g in graphs:
@@ -59,7 +59,7 @@ def test_a_warehouse_failure_is_shown_not_raised(monkeypatch):
         raise RuntimeError("no such view")
 
     use(monkeypatch, broken)
-    page = dash_app.layout()
+    page = dash_app.dashboard_page()
     assert "no such view" in str(page)
 
 
@@ -75,3 +75,23 @@ def test_frames_are_cached_between_requests(monkeypatch):
     data.load_cached(now=100)
     data.load_cached(now=data.CACHE_SECONDS + 1)
     assert len(calls) == 2
+
+
+def test_router_serves_each_view_and_marks_it_in_the_nav(monkeypatch):
+    use(monkeypatch, synthetic_frames)
+    nav, page = dash_app.route("/datastudio")
+    iframe = find(page, cls_name="Iframe")[0]
+    assert iframe.src.startswith("https://datastudio.google.com/embed/reporting/")
+    active = [link for link in find(nav, cls_name="Link") if "active" in link.className]
+    assert [link.children for link in active] == ["Data Studio"]
+    nav, page = dash_app.route("/no-such-page")  # unknown paths fall back to the dashboard
+    assert len(find(page, cls_name="Graph")) == 7
+    assert {a.children for a in find(nav, cls_name="A")} == {"GitHub", "API docs", "Weekly memos"}
+
+
+def test_shell_layout_needs_no_warehouse(monkeypatch):
+    def broken():
+        raise AssertionError("the shell must not query the warehouse")
+
+    use(monkeypatch, broken)
+    assert find(dash_app.layout(), comp_id="page")

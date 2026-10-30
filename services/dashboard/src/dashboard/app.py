@@ -1,10 +1,14 @@
-"""The weekly metrics review as a Plotly Dash app.
+"""The project's front door: the weekly metrics review as a Plotly Dash app, with a toggle to
+the same views in Google Data Studio and links to the code, the API and the latest memo.
 
     python -m dashboard.app                      # local, http://localhost:8050
     gunicorn dashboard.app:server                # what the container runs
 
+    /             the Dash dashboard
+    /datastudio   the Data Studio report, embedded
+
 Reads only the governed `metrics` views (DuckDB locally, BigQuery in production), so every
-number matches the API, the memo and the other dashboards.
+number matches the API, the memo and the Data Studio report.
 """
 
 from __future__ import annotations
@@ -16,6 +20,15 @@ from dash import Dash, Input, Output, callback, dcc, html
 from dashboard import charts, data
 
 REPO = "https://github.com/lqf2b8/llm-market-metrics"
+MEMOS = f"{REPO}/tree/main/memos"
+API_DOCS = os.environ.get("API_DOCS_URL", "http://localhost:8080/docs")
+DATASTUDIO_REPORT = os.environ.get("DATASTUDIO_REPORT_ID", "9eaf6a67-8c9b-44df-bece-b5aaf7d1e203")
+DATASTUDIO_PAGE = os.environ.get("DATASTUDIO_PAGE_ID", "tEnnC")
+DATASTUDIO_URL = f"https://datastudio.google.com/reporting/{DATASTUDIO_REPORT}"
+DATASTUDIO_EMBED = (
+    f"https://datastudio.google.com/embed/reporting/{DATASTUDIO_REPORT}/page/{DATASTUDIO_PAGE}"
+)
+VIEWS = {"/": "Dash", "/datastudio": "Data Studio"}
 SOURCE = "Source: OpenRouter (openrouter.ai/rankings), CC BY 4.0"
 FONTS = (
     "https://fonts.googleapis.com/css2?family=Lora:wght@400;600"
@@ -28,6 +41,8 @@ app = Dash(
     title="LLM API Market Metrics",
     external_stylesheets=[FONTS],
     meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}],
+    # Page bodies are swapped in by the router, so their controls are not in the first layout.
+    suppress_callback_exceptions=True,
 )
 server = app.server
 
@@ -110,7 +125,83 @@ def headline_section(d: charts.Data) -> html.Section:
     return html.Section(children, className="card")
 
 
+def nav(pathname: str) -> html.Nav:
+    """View toggle on the left, links on the right; the current view is marked."""
+    toggle = [
+        dcc.Link(
+            label,
+            href=path,
+            className="view active" if path == pathname else "view",
+            title=f"Show the {label} view",
+        )
+        for path, label in VIEWS.items()
+    ]
+    links = [
+        html.A("GitHub", href=REPO, target="_blank", rel="noopener"),
+        html.A("API docs", href=API_DOCS, target="_blank", rel="noopener"),
+        html.A("Weekly memos", href=MEMOS, target="_blank", rel="noopener"),
+    ]
+    return html.Nav(
+        [
+            html.Span("LLM API Market Metrics", className="brand"),
+            html.Div(toggle, className="views", role="group", **{"aria-label": "Dashboard"}),
+            html.Div(links, className="links"),
+        ],
+        className="topnav",
+    )
+
+
+def datastudio_page() -> html.Main:
+    return html.Main(
+        [
+            html.Header(
+                [
+                    html.H1("LLM API Market: Weekly Metrics Review"),
+                    html.P(
+                        [
+                            "The same governed views in Google Data Studio, read live from "
+                            "BigQuery. ",
+                            html.A(
+                                "Open in Data Studio",
+                                href=DATASTUDIO_URL,
+                                target="_blank",
+                                rel="noopener",
+                            ),
+                            " if the embed does not load.",
+                        ],
+                        className="meta",
+                    ),
+                ]
+            ),
+            html.Iframe(
+                src=DATASTUDIO_EMBED,
+                title="LLM API Market Metrics in Google Data Studio",
+                className="embed",
+                allow="fullscreen",
+            ),
+        ],
+        className="page",
+    )
+
+
 def layout() -> html.Div:
+    return html.Div(
+        [
+            dcc.Location(id="url"),
+            html.Div(nav("/"), id="nav"),
+            html.Div(id="page"),
+        ]
+    )
+
+
+@callback(Output("nav", "children"), Output("page", "children"), Input("url", "pathname"))
+def route(pathname: str | None):
+    path = pathname if pathname in VIEWS else "/"
+    page = datastudio_page() if path == "/datastudio" else dashboard_page()
+    return nav(path), page
+
+
+def dashboard_page() -> html.Main:
     """Built on every page load, so a new pipeline run shows without a restart."""
     try:
         d = current()

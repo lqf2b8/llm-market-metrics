@@ -4,7 +4,7 @@ models:
   - name: weekly_kpis
     description: >
       One row per ISO week: the headline KPIs for the weekly metrics review. This view is the
-      contract for every consumer (metrics API, Hex, the Tableau export, the memo). Use only
+      contract for every consumer (metrics API, dashboards, memo). Use only
       rows where is_complete_week for week-over-week comparisons, and only rows where
       is_spend_reliable for spend trends.
     config:

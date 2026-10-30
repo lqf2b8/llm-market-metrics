@@ -1,13 +1,12 @@
 # Dashboards
 
-Three front ends read the same governed `metrics` views, and the portal lets each visitor
-choose one. None of them computes a metric of its own.
+Two front ends read the same governed `metrics` views, and the Dash app's top bar lets each
+visitor choose one (`/` for Dash, `/datastudio` for the embedded Data Studio report). None of them computes a metric of its own.
 
 | Front end | Where it runs | Data path | Status |
 | --- | --- | --- | --- |
 | Plotly Dash (`services/dashboard`) | Container in this stack; Cloud Run later | DuckDB locally, BigQuery in production | Built, tested |
 | [Google Data Studio](https://datastudio.google.com/reporting/9eaf6a67-8c9b-44df-bece-b5aaf7d1e203) (formerly Looker Studio) | Google, view-only link | BigQuery `metrics` views and the `dash_*` reporting views, live | Built |
-| Tableau Public | Tableau Public | Google Sheet the export job rewrites daily | Day 10 |
 
 ![Dash dashboard](screenshots/dash.png)
 
@@ -30,4 +29,9 @@ Poppins), and fixed colors per provider. The `dash_*` views only reshape governe
 for a tool without a scripting layer; they compute nothing new. Data Studio reads them with the
 report owner's credentials, so viewers need no Google Cloud access.
 
-Hex was the original plan, but its sign-up requires a work email address.
+Hex was the original plan, but its sign-up requires a work email address. Tableau Public was
+dropped as well: it cannot read BigQuery, so it would need a spreadsheet export and a sync
+job to show the same views a third time.
+
+The embed needs embedding enabled on the report (Data Studio: File → Embed report → Enable
+embedding) and link sharing set to Unlisted; otherwise the page offers a link instead.
