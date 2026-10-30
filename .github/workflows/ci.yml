@@ -159,7 +159,7 @@ jobs:
               -d '{"output":"..nav.children...page.children..","outputs":[{"id":"nav","property":"children"},{"id":"page","property":"children"}],"inputs":[{"id":"url","property":"pathname","value":"'"$1"'"}],"changedPropIds":["url.pathname"],"state":[]}'
           }
           route / | grep -q "Could not read the metrics views"
-          route /datastudio | grep -q "datastudio.google.com/embed/reporting"
+          route /datastudio | grep -q "datastudio.google.com"  # JSON escapes the slashes
           docker logs dash
 
   memo:
