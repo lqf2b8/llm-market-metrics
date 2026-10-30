@@ -15,8 +15,8 @@ jobs:
       run:
         working-directory: services/ingest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - run: pip install -e ".[dev]"
@@ -38,8 +38,8 @@ jobs:
       RAW_DATA_DIR: ci_fixtures/raw
       DUCKDB_PATH: ci.duckdb
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - run: pip install -r requirements-dev.txt
@@ -66,8 +66,8 @@ jobs:
       run:
         working-directory: services/analysis
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - run: pip install -e ".[dev]"
@@ -86,8 +86,8 @@ jobs:
       RAW_DATA_DIR: ${{ github.workspace }}/fixtures26
       DUCKDB_PATH: ${{ github.workspace }}/warehouse/ci.duckdb
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Generate 26 weeks of fixture data and run dbt's first pass
@@ -139,8 +139,8 @@ jobs:
       run:
         working-directory: services/dashboard
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - run: pip install -e ".[dev]"
@@ -168,8 +168,8 @@ jobs:
       run:
         working-directory: services/memo
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - run: pip install -e ".[dev]"

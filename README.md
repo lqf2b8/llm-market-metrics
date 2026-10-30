@@ -2,7 +2,9 @@
 
 An automated weekly metrics review of the LLM API market, built the way a finance analytics team would run one: public usage data in, governed metric definitions in dbt, a weekly memo explaining what moved and why, and two dashboards (Plotly Dash and Google Data Studio) that read the same numbers, behind one front door that lets each visitor choose.
 
-> **Status: in progress.** Days 1-9 of 12: ingest, dbt (raw data to governed metrics and a price-volume-mix spend bridge), frozen weekly forecasts with calibrated intervals, a read-only metrics API, a Claude-drafted weekly memo with a number check, and a Plotly Dash front door with a toggle to the same views in Google Data Studio. The services run in containers against DuckDB locally or BigQuery, and deploy to Cloud Run from GitHub Actions on a daily schedule.
+**Live:** [dashboard](https://dashboard-2cehw44wga-uc.a.run.app) · [API docs](https://metrics-api-2cehw44wga-uc.a.run.app/docs) · [Data Studio report](https://datastudio.google.com/reporting/9eaf6a67-8c9b-44df-bece-b5aaf7d1e203). Refreshed daily by GitHub Actions on Cloud Run.
+
+> **Status: in progress.** Days 1-9 of 12 (deployed): ingest, dbt (raw data to governed metrics and a price-volume-mix spend bridge), frozen weekly forecasts with calibrated intervals, a read-only metrics API, a Claude-drafted weekly memo with a number check, and a Plotly Dash front door with a toggle to the same views in Google Data Studio. The services run in containers against DuckDB locally or BigQuery, and deploy to Cloud Run from GitHub Actions on a daily schedule.
 
 ## What it answers each week
 
