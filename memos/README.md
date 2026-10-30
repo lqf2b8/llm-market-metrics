@@ -20,3 +20,7 @@ Run locally, with the API up (`docker compose up`) and `ANTHROPIC_API_KEY` in `.
 
     docker compose run --rm memo                     # latest complete week
     docker compose run --rm memo --week 2026-10-19
+
+In production the `daily` workflow drafts the memo on Tuesdays and opens a pull request with
+it. To draft memos for past weeks, run `daily` by hand with `memo_weeks` set to their Mondays;
+all the drafts arrive in one pull request.
