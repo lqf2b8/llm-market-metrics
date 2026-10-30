@@ -68,25 +68,34 @@ jobs:
           fi
 
       - name: Draft the weekly memo
+        id: draft
         if: steps.when.outputs.memo == 'true'
         env:
           WEEKS: ${{ inputs.memo_weeks }}
         run: |
+          # A draft that fails the number check is still saved (as <week>.REJECTED.md, with the
+          # reasons at the bottom), so keep going and open the PR; fail the run at the end.
+          failed=""
           if [ -z "$WEEKS" ]; then
-            gcloud run jobs execute memo --region "$REGION" --wait --quiet
-            exit 0
+            gcloud run jobs execute memo --region "$REGION" --wait --quiet || failed="latest week"
+          else
+            for week in $WEEKS; do
+              if ! [[ "$week" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+                echo "::error::Not a date: $week"; exit 1
+              fi
+              echo "::group::memo $week"
+              gcloud run jobs execute memo --region "$REGION" --wait --quiet --args="--week,$week" \
+                || failed="$failed $week"
+              echo "::endgroup::"
+            done
           fi
-          for week in $WEEKS; do
-            if ! [[ "$week" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
-              echo "::error::Not a date: $week"; exit 1
-            fi
-            echo "::group::memo $week"
-            gcloud run jobs execute memo --region "$REGION" --wait --quiet --args="--week,$week"
-            echo "::endgroup::"
-          done
+          echo "failed=$failed" >> "$GITHUB_OUTPUT"
+          if [ -n "$failed" ]; then
+            echo "::warning::Memo job failed for:$failed. If the number check rejected a draft, the PR has <week>.REJECTED.md with the reasons; otherwise see the job's logs in Cloud Run."
+          fi
 
       - name: Open a pull request with the draft
-        if: steps.when.outputs.memo == 'true'
+        if: always() && steps.when.outputs.memo == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -106,3 +115,11 @@ jobs:
           body="Drafted by Claude from the metrics API and checked number by number against the facts file. Edit before merging; see memos/README.md. A file named *.REJECTED.md failed the number check and lists why at the bottom."
           gh pr view "$branch" >/dev/null 2>&1 || \
             gh pr create --head "$branch" --title "Weekly memo draft $(date -u +%Y-%m-%d)" --body "$body"
+
+      - name: Fail if any memo job failed
+        if: steps.draft.outputs.failed != ''
+        env:
+          FAILED: ${{ steps.draft.outputs.failed }}
+        run: |
+          echo "::error::Memo job failed for:$FAILED"
+          exit 1
