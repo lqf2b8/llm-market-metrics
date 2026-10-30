@@ -153,7 +153,13 @@ jobs:
         run: |
           docker run -d --name dash -p 8050:8050 -e WAREHOUSE=duckdb -e DUCKDB_PATH=/nope.duckdb dashboard:ci
           for i in $(seq 1 30); do curl -sf localhost:8050/ >/dev/null && break; sleep 1; done
-          curl -sf localhost:8050/_dash-layout | grep -q "Could not read the metrics views"
+          # Pages are rendered by the router callback, so ask it for each route.
+          route() {
+            curl -sf -H 'Content-Type: application/json' localhost:8050/_dash-update-component \
+              -d '{"output":"..nav.children...page.children..","outputs":[{"id":"nav","property":"children"},{"id":"page","property":"children"}],"inputs":[{"id":"url","property":"pathname","value":"'"$1"'"}],"changedPropIds":["url.pathname"],"state":[]}'
+          }
+          route / | grep -q "Could not read the metrics views"
+          route /datastudio | grep -q "datastudio.google.com/embed/reporting"
           docker logs dash
 
   memo:
