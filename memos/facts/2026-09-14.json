@@ -1,0 +1,235 @@
+{
+  "against_plan": {
+    "available": true,
+    "next_week_forecast": [
+      {
+        "forecast": "$156.3M",
+        "metric": "implied spend",
+        "range_high": "$196.4M",
+        "range_low": "$124.4M",
+        "week_of": "2026-09-21"
+      },
+      {
+        "forecast": "142.4T",
+        "metric": "tokens",
+        "range_high": "169.7T",
+        "range_low": "119.5T",
+        "week_of": "2026-09-21"
+      }
+    ],
+    "note": "The plan is a statistical forecast, frozen the week it was made and never revised. Ranges are 90% prediction intervals. Implied spend is forecast only from weeks where spend is reliable.",
+    "this_week_vs_forecast": [
+      {
+        "actual": "$147.1M",
+        "actual_vs_forecast": "+9.6%",
+        "forecast": "$134.2M",
+        "forecast_made_week_of": "2026-09-07",
+        "metric": "implied spend",
+        "range_high": "$168.6M",
+        "range_low": "$106.9M",
+        "result": "inside the range"
+      },
+      {
+        "actual": "128.9T",
+        "actual_vs_forecast": "-6.9%",
+        "forecast": "138.4T",
+        "forecast_made_week_of": "2026-09-07",
+        "metric": "tokens",
+        "range_high": "164.9T",
+        "range_low": "116.2T",
+        "result": "inside the range"
+      }
+    ],
+    "track_record_one_week_ahead": [
+      {
+        "average_miss": "11.4%",
+        "metric": "implied spend",
+        "share_of_actuals_inside_range": "86.7%",
+        "weeks_with_a_range": 45
+      },
+      {
+        "average_miss": "9.6%",
+        "metric": "tokens",
+        "share_of_actuals_inside_range": "93.2%",
+        "weeks_with_a_range": 73
+      }
+    ]
+  },
+  "caveats": [
+    "OpenRouter is one marketplace, not the whole market.",
+    "Implied spend is tokens x list price with an assumed prompt/completion split: an index, not revenue. Shares and changes are robust to the split; the level is not.",
+    "Token counts use each provider's tokenizer and are not strictly comparable."
+  ],
+  "data_through_date": "2026-09-20",
+  "headline": {
+    "effective_paid_price": "$1.35 per million tokens",
+    "effective_paid_price_wow_change": "+13.3%",
+    "free_share_of_top50_tokens": "10.1%",
+    "implied_spend": "$147.1M",
+    "implied_spend_wow_change": "+12.2%",
+    "models_entering_top50": 3,
+    "new_model_share_of_top50_tokens": "62.3%",
+    "paid_tokens": "108.8T",
+    "paid_tokens_wow_change": "-1.0%",
+    "priced_coverage": "100.0%",
+    "tokens": "128.9T",
+    "tokens_wow_change": "+1.7%"
+  },
+  "is_spend_reliable": true,
+  "pricing_power_gaps": [
+    {
+      "gap": "+26.3 pp",
+      "paid_token_share": "13.8%",
+      "provider": "openai",
+      "spend_share": "40.1%"
+    },
+    {
+      "gap": "-23.9 pp",
+      "paid_token_share": "29.1%",
+      "provider": "deepseek",
+      "spend_share": "5.2%"
+    },
+    {
+      "gap": "+19.7 pp",
+      "paid_token_share": "3.6%",
+      "provider": "anthropic",
+      "spend_share": "23.4%"
+    }
+  ],
+  "providers_by_spend": [
+    {
+      "implied_spend": "$59.1M",
+      "paid_token_share": "13.8%",
+      "provider": "openai",
+      "spend_share": "40.1%",
+      "tokens_wow_change": "-32.1%"
+    },
+    {
+      "implied_spend": "$34.4M",
+      "paid_token_share": "3.6%",
+      "provider": "anthropic",
+      "spend_share": "23.4%",
+      "tokens_wow_change": "-7.6%"
+    },
+    {
+      "implied_spend": "$14.8M",
+      "paid_token_share": "15.9%",
+      "provider": "tencent",
+      "spend_share": "10.0%",
+      "tokens_wow_change": "-16.1%"
+    },
+    {
+      "implied_spend": "$7.6M",
+      "paid_token_share": "29.1%",
+      "provider": "deepseek",
+      "spend_share": "5.2%",
+      "tokens_wow_change": "+35.7%"
+    },
+    {
+      "implied_spend": "$7.5M",
+      "paid_token_share": "17.2%",
+      "provider": "z-ai",
+      "spend_share": "5.1%",
+      "tokens_wow_change": "+16.1%"
+    },
+    {
+      "implied_spend": "$7.5M",
+      "paid_token_share": "1.3%",
+      "provider": "moonshotai",
+      "spend_share": "5.1%",
+      "tokens_wow_change": "-1.3%"
+    }
+  ],
+  "recent_weeks": [
+    {
+      "implied_spend": "$75.3M",
+      "is_spend_reliable": true,
+      "tokens": "56.8T",
+      "week_start": "2026-07-27"
+    },
+    {
+      "implied_spend": "$84.2M",
+      "is_spend_reliable": true,
+      "tokens": "69.0T",
+      "week_start": "2026-08-03"
+    },
+    {
+      "implied_spend": "$105.7M",
+      "is_spend_reliable": true,
+      "tokens": "75.3T",
+      "week_start": "2026-08-10"
+    },
+    {
+      "implied_spend": "$97.8M",
+      "is_spend_reliable": true,
+      "tokens": "93.4T",
+      "week_start": "2026-08-17"
+    },
+    {
+      "implied_spend": "$99.6M",
+      "is_spend_reliable": true,
+      "tokens": "113.0T",
+      "week_start": "2026-08-24"
+    },
+    {
+      "implied_spend": "$121.2M",
+      "is_spend_reliable": true,
+      "tokens": "115.5T",
+      "week_start": "2026-08-31"
+    },
+    {
+      "implied_spend": "$131.2M",
+      "is_spend_reliable": true,
+      "tokens": "126.8T",
+      "week_start": "2026-09-07"
+    },
+    {
+      "implied_spend": "$147.1M",
+      "is_spend_reliable": true,
+      "tokens": "128.9T",
+      "week_start": "2026-09-14"
+    }
+  ],
+  "source": "Source: OpenRouter (openrouter.ai/rankings), CC BY 4.0",
+  "spend_bridge": {
+    "change": "+$16.0M",
+    "largest_provider_moves": [
+      {
+        "change": "+$20.6M",
+        "mix_effect": "+$20.0M",
+        "price_effect": "$0",
+        "provider": "openai",
+        "volume_effect": "+$640.0K"
+      },
+      {
+        "change": "-$4.7M",
+        "mix_effect": "-$5.0M",
+        "price_effect": "$0",
+        "provider": "tencent",
+        "volume_effect": "+$324.4K"
+      },
+      {
+        "change": "+$1.6M",
+        "mix_effect": "+$1.5M",
+        "price_effect": "$0",
+        "provider": "deepseek",
+        "volume_effect": "+$100.5K"
+      },
+      {
+        "change": "-$674.7K",
+        "mix_effect": "-$799.0K",
+        "price_effect": "$0",
+        "provider": "google",
+        "volume_effect": "+$124.4K"
+      }
+    ],
+    "mix_effect": "+$13.8M",
+    "price_effect": "$0",
+    "price_effect_note": "volume + mix + price = spend change exactly. Daily price snapshots began on 2026-10-28; earlier usage is priced at the first snapshot, so price effects for weeks before then are $0 by construction, not evidence that prices were flat.",
+    "prior_spend": "$131.2M",
+    "prior_week_start": "2026-09-07",
+    "spend": "$147.1M",
+    "volume_effect": "+$2.2M"
+  },
+  "week_start": "2026-09-14"
+}
