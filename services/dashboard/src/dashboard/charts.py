@@ -311,6 +311,7 @@ def forecast(d: Data, metric_label: str) -> go.Figure:
         "Forecasts are frozen when made and never revised.",
     )
     fig.update_yaxes(tickformat="~s", tickprefix="" if metric == "tokens" else "$")
+    fig.update_layout(margin=dict(r=96))  # room for the "Next:" label past the last point
     return fig
 
 
